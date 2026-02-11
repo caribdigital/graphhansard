@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from graphhansard.miner.catalogue import AudioCatalogue, DownloadStatus, SessionAudio
@@ -167,7 +167,7 @@ def handle_add_manual(args: argparse.Namespace) -> int:
             audio_bitrate_kbps=0,  # Unknown for manual files
             file_path=str(file_path),
             file_hash_sha256=file_hash,
-            download_timestamp=datetime.now(),
+            download_timestamp=datetime.now(timezone.utc),
             source_url=f"manual:{file_path}",
             status=DownloadStatus.DOWNLOADED,
             notes="Manually added via CLI",
