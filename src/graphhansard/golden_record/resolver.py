@@ -11,7 +11,14 @@ by the brain.entity_extractor module, not here.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+
+from rapidfuzz import fuzz
+
+from .models import GoldenRecord
 
 
 @dataclass
@@ -31,7 +38,22 @@ class AliasResolver:
     """
 
     def __init__(self, golden_record_path: str, fuzzy_threshold: int = 85):
-        raise NotImplementedError("AliasResolver not yet implemented — see Issue #2")
+        """Initialize the AliasResolver.
+
+        Args:
+            golden_record_path: Path to mps.json
+            fuzzy_threshold: Minimum score for fuzzy matches (0-100), default 85
+        """
+        self.golden_record_path = Path(golden_record_path)
+        self.fuzzy_threshold = fuzzy_threshold
+        self.unresolved_log: list[dict] = []
+
+        # Load the golden record
+        data = self.golden_record_path.read_text(encoding="utf-8")
+        self.golden_record = GoldenRecord.model_validate_json(data)
+
+        # Build the inverted index
+        self._alias_index = self.build_inverted_index()
 
     def resolve(
         self, mention: str, debate_date: str | None = None
@@ -45,8 +67,196 @@ class AliasResolver:
         Returns:
             ResolutionResult with node_id, confidence, and method.
         """
-        raise NotImplementedError
+        # Normalize the mention
+        normalized = self._normalize(mention)
 
-    def build_inverted_index(self) -> dict[str, str]:
-        """Build the alias → node_id inverted index from mps.json."""
-        raise NotImplementedError
+        # Parse debate_date if provided
+        query_date = date.fromisoformat(debate_date) if debate_date else None
+
+        # Step 1: Exact match
+        result = self._exact_match(normalized, query_date)
+        if result:
+            return result
+
+        # Step 2: Fuzzy match
+        result = self._fuzzy_match(normalized, query_date)
+        if result:
+            return result
+
+        # Step 3: Unresolved
+        self._log_unresolved(mention, debate_date)
+        return ResolutionResult(
+            node_id=None, confidence=0.0, method="unresolved", collision_warning=None
+        )
+
+    def build_inverted_index(self) -> dict[str, list[str]]:
+        """Build the alias → node_ids inverted index from mps.json.
+
+        Returns a dictionary mapping normalized aliases to lists of node_ids.
+        Multiple node_ids indicate a collision.
+        """
+        index: dict[str, list[str]] = {}
+
+        for mp in self.golden_record.mps:
+            for alias in mp.all_aliases:
+                normalized = self._normalize(alias)
+                if normalized not in index:
+                    index[normalized] = []
+                if mp.node_id not in index[normalized]:
+                    index[normalized].append(mp.node_id)
+
+        return index
+
+    def _normalize(self, text: str) -> str:
+        """Normalize text for matching: lowercase, strip whitespace."""
+        return text.strip().lower()
+
+    def _exact_match(
+        self, normalized: str, query_date: date | None
+    ) -> ResolutionResult | None:
+        """Attempt exact match against the inverted index.
+
+        Args:
+            normalized: Normalized mention string
+            query_date: Optional date for temporal filtering
+
+        Returns:
+            ResolutionResult if match found, None otherwise
+        """
+        # Check if alias exists in index
+        if normalized not in self._alias_index:
+            return None
+
+        candidates = self._alias_index[normalized]
+
+        # If temporal filtering is requested, filter by date
+        if query_date:
+            temporal_candidates = []
+            for node_id in candidates:
+                mp = next(mp for mp in self.golden_record.mps if mp.node_id == node_id)
+                # Check if this alias is valid on the query date
+                valid_aliases = [self._normalize(a) for a in mp.aliases_on(query_date)]
+                if normalized in valid_aliases:
+                    temporal_candidates.append(node_id)
+
+            candidates = temporal_candidates
+
+        if not candidates:
+            return None
+
+        # Check for collision
+        collision_warning = None
+        if len(candidates) > 1:
+            # Check if this is a known collision
+            known_collision = next(
+                (
+                    c
+                    for c in self.golden_record.alias_collisions
+                    if self._normalize(c.alias) == normalized
+                ),
+                None,
+            )
+            if known_collision:
+                collision_warning = (
+                    f"Alias collision: {known_collision.resolution_strategy}"
+                )
+            else:
+                collision_warning = (
+                    f"Unexpected alias collision: {', '.join(candidates)}"
+                )
+
+        # If only one candidate after temporal filtering, return it
+        if len(candidates) == 1:
+            return ResolutionResult(
+                node_id=candidates[0],
+                confidence=1.0,
+                method="exact",
+                collision_warning=collision_warning,
+            )
+
+        # Multiple candidates - return first with collision warning
+        return ResolutionResult(
+            node_id=candidates[0],
+            confidence=1.0,
+            method="exact",
+            collision_warning=collision_warning,
+        )
+
+    def _fuzzy_match(
+        self, normalized: str, query_date: date | None
+    ) -> ResolutionResult | None:
+        """Attempt fuzzy match using RapidFuzz.
+
+        Args:
+            normalized: Normalized mention string
+            query_date: Optional date for temporal filtering
+
+        Returns:
+            ResolutionResult if match found above threshold, None otherwise
+        """
+        best_score = 0
+        best_node_id = None
+
+        # Get all candidate aliases
+        for mp in self.golden_record.mps:
+            # Get aliases based on temporal context
+            if query_date:
+                aliases = mp.aliases_on(query_date)
+            else:
+                aliases = mp.all_aliases
+
+            # Try fuzzy matching against each alias
+            for alias in aliases:
+                normalized_alias = self._normalize(alias)
+                score = fuzz.token_sort_ratio(normalized, normalized_alias)
+
+                if score > best_score:
+                    best_score = score
+                    best_node_id = mp.node_id
+
+        # Check if best match exceeds threshold
+        if best_score >= self.fuzzy_threshold:
+            # Normalize confidence to 0-1 range
+            confidence = best_score / 100.0
+
+            return ResolutionResult(
+                node_id=best_node_id,
+                confidence=confidence,
+                method="fuzzy",
+                collision_warning=None,
+            )
+
+        return None
+
+    def _log_unresolved(self, mention: str, debate_date: str | None) -> None:
+        """Log an unresolved mention for human review.
+
+        Args:
+            mention: The raw mention that could not be resolved
+            debate_date: Optional date context
+        """
+        self.unresolved_log.append(
+            {
+                "mention": mention,
+                "debate_date": debate_date,
+                "timestamp": str(date.today()),
+            }
+        )
+
+    def save_unresolved_log(self, output_path: str) -> None:
+        """Save the unresolved mentions log to a JSON file.
+
+        Args:
+            output_path: Path to save the log file
+        """
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(self.unresolved_log, f, indent=2, ensure_ascii=False)
+
+    def save_index(self, output_path: str) -> None:
+        """Save the inverted alias index to a JSON file.
+
+        Args:
+            output_path: Path to save the index file
+        """
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(self._alias_index, f, indent=2, ensure_ascii=False)
