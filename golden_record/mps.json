@@ -1,0 +1,1282 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "parliament": "14th Parliament of The Bahamas",
+    "parliament_start": "2021-09-16",
+    "total_seats": 39,
+    "composition": {
+      "PLP": 32,
+      "FNM": 6,
+      "COI": 1
+    },
+    "last_updated": "2026-02-10",
+    "compiled_by": "Project Bay Street Graph — Dr. Aris Moncur",
+    "source_document": "Bahamas_Parliamentary_Entity_Knowledge_Base_v1.md",
+    "notes": "Portfolio start dates use the general election date (2021-09-16) as default unless a reshuffle or promotion date is documented. Reshuffle dates: Sept 3, 2023 (major); Jan 2, 2024 (adjustments)."
+  },
+  "mps": [
+    {
+      "node_id": "mp_davis_brave",
+      "full_name": "Philip Edward Davis, K.C.",
+      "common_name": "Brave Davis",
+      "party": "PLP",
+      "constituency": "Cat Island, Rum Cay and San Salvador",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "1992",
+      "election_notes": "Won 1992 by-election; lost 1997; won 2002, 2007, 2012, 2017, 2021",
+      "portfolios": [
+        {
+          "title": "Prime Minister and Minister of Finance",
+          "short_title": "Prime Minister",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Brave",
+        "Papa",
+        "Brave Davis",
+        "Philip Davis",
+        "Davis KC"
+      ],
+      "special_roles": ["Prime Minister", "Leader of Government Business (de facto)"],
+      "entity_notes": "Universally known as 'Brave'; inherited from father. Holds Finance portfolio personally — no separate Finance minister."
+    },
+    {
+      "node_id": "mp_cooper_chester",
+      "full_name": "Isaac Chester Cooper",
+      "common_name": "Chester Cooper",
+      "party": "PLP",
+      "constituency": "Exumas and Ragged Island",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2017",
+      "election_notes": "Re-elected 2021",
+      "portfolios": [
+        {
+          "title": "Deputy Prime Minister",
+          "short_title": "Deputy Prime Minister",
+          "start_date": "2021-09-17",
+          "end_date": null
+        },
+        {
+          "title": "Minister of Tourism, Investments and Aviation",
+          "short_title": "Minister of Tourism",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Chester",
+        "Chester Cooper"
+      ],
+      "special_roles": ["Deputy Prime Minister", "Acting Prime Minister (frequent)"],
+      "entity_notes": "Never uses 'Isaac' publicly. Widely viewed as heir apparent to PLP leadership."
+    },
+    {
+      "node_id": "mp_mitchell_fred",
+      "full_name": "Frederick Audley Mitchell",
+      "common_name": "Fred Mitchell",
+      "party": "PLP",
+      "constituency": "Fox Hill",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2002",
+      "election_notes": "Five consecutive terms: 2002, 2007, 2012, 2017, 2021",
+      "portfolios": [
+        {
+          "title": "Minister of Foreign Affairs",
+          "short_title": "Minister of Foreign Affairs",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Fred",
+        "Foxy",
+        "Fred Mitchell",
+        "Frederick Mitchell"
+      ],
+      "special_roles": ["PLP Chairman"],
+      "entity_notes": "'Foxy' is colloquial nod to Fox Hill constituency. Controls PLP political machinery as Chairman."
+    },
+    {
+      "node_id": "mp_hanna_martin_glenys",
+      "full_name": "Glenys Margaret E. Hanna-Martin",
+      "common_name": "Glenys Hanna-Martin",
+      "party": "PLP",
+      "constituency": "Englerston",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2002",
+      "election_notes": "Multiple consecutive terms",
+      "portfolios": [
+        {
+          "title": "Minister of Education and Technical and Vocational Training",
+          "short_title": "Minister of Education",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Glenys",
+        "GHM",
+        "Glenys Hanna-Martin",
+        "Hanna-Martin",
+        "Glenys Martin"
+      ],
+      "special_roles": ["Acting Prime Minister (frequent)"],
+      "entity_notes": "Longest-serving female parliamentarian in Bahamian history. Daughter of late Governor-General Arthur D. Hanna. Maiden name: Hanna. Englerston considered safest PLP seat."
+    },
+    {
+      "node_id": "mp_darville_michael",
+      "full_name": "Dr. Michael Ronald Darville",
+      "common_name": "Dr. Michael Darville",
+      "party": "PLP",
+      "constituency": "Tall Pines",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2012",
+      "election_notes": "First elected 2012 (Grand Bahama); lost 2017; returned 2021 (Tall Pines, New Providence)",
+      "portfolios": [
+        {
+          "title": "Minister of Health and Wellness",
+          "short_title": "Minister of Health",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Mike",
+        "Doc",
+        "Dr. Darville",
+        "Michael Darville"
+      ],
+      "special_roles": [],
+      "entity_notes": "ALIAS COLLISION: 'Doc' is also used for Dr. Hubert Minnis (mp_minnis_hubert). Context-dependent resolution required — Darville is PLP/Tall Pines, Minnis is FNM/Killarney."
+    },
+    {
+      "node_id": "mp_sears_alfred",
+      "full_name": "Alfred Michael Sears, K.C.",
+      "common_name": "Alfred Sears",
+      "party": "PLP",
+      "constituency": "Fort Charlotte",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2002",
+      "election_notes": "Won 2002; lost 2007; returned 2021",
+      "portfolios": [
+        {
+          "title": "Minister of Works and Utilities",
+          "short_title": "Minister of Works",
+          "start_date": "2021-09-17",
+          "end_date": "2023-09-03"
+        },
+        {
+          "title": "Minister of Immigration and National Insurance",
+          "short_title": "Minister of Immigration",
+          "start_date": "2023-09-03",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Alfred",
+        "Alfred Sears",
+        "Sears KC"
+      ],
+      "special_roles": ["Former Attorney General (Christie administration)"],
+      "entity_notes": "Portfolio changed in Sept 2023 reshuffle: Works → Immigration. Fort Charlotte is a swing constituency."
+    },
+    {
+      "node_id": "mp_munroe_wayne",
+      "full_name": "Wayne R. Munroe, K.C.",
+      "common_name": "Wayne Munroe",
+      "party": "PLP",
+      "constituency": "Freetown",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of National Security",
+          "short_title": "Minister of National Security",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Wayne",
+        "Wayne Munroe",
+        "Munroe KC"
+      ],
+      "special_roles": ["Leader of Government Business in the House (assumed after Wilchcombe death, Sept 2023)"],
+      "entity_notes": "Prominent criminal defense attorney before politics. Constituency formerly known as Montagu."
+    },
+    {
+      "node_id": "mp_sweeting_clay",
+      "full_name": "Clay Glennford Sweeting",
+      "common_name": "Clay Sweeting",
+      "party": "PLP",
+      "constituency": "Central and South Eleuthera",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of Agriculture and Marine Resources",
+          "short_title": "Minister of Agriculture",
+          "start_date": "2021-09-17",
+          "end_date": "2023-09-03"
+        },
+        {
+          "title": "Minister of Works and Family Island Affairs",
+          "short_title": "Minister of Works",
+          "start_date": "2023-09-03",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Clay",
+        "Clay Sweeting"
+      ],
+      "special_roles": [],
+      "entity_notes": "Portfolio changed in Sept 2023 reshuffle: Agriculture → Works. White Bahamian from Spanish Wells; rising star. ALIAS COLLISION: 'Minister of Works' was previously Sears (Fort Charlotte) until Sept 2023."
+    },
+    {
+      "node_id": "mp_coleby_davis_jobeth",
+      "full_name": "JoBeth Lillian Coleby-Davis",
+      "common_name": "JoBeth Coleby-Davis",
+      "party": "PLP",
+      "constituency": "Elizabeth",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated Dr. Duane Sands (FNM)",
+      "portfolios": [
+        {
+          "title": "Minister of Housing and Transport",
+          "short_title": "Minister of Housing",
+          "start_date": "2021-09-17",
+          "end_date": "2023-09-03"
+        },
+        {
+          "title": "Minister of Energy and Transport",
+          "short_title": "Minister of Energy",
+          "start_date": "2023-09-03",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "JoBeth",
+        "JoBeth Coleby-Davis",
+        "Coleby-Davis"
+      ],
+      "special_roles": [],
+      "entity_notes": "Maiden name: Coleby. Elizabeth is a key swing seat. Assigned Energy portfolio in Sept 2023 reshuffle to tackle BPL crisis."
+    },
+    {
+      "node_id": "mp_bell_keith",
+      "full_name": "Keith Ricardo Bell",
+      "common_name": "Keith Bell",
+      "party": "PLP",
+      "constituency": "Carmichael",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of Labour and Immigration",
+          "short_title": "Minister of Labour",
+          "start_date": "2021-09-17",
+          "end_date": "2023-09-03"
+        },
+        {
+          "title": "Minister of Housing and Urban Renewal",
+          "short_title": "Minister of Housing",
+          "start_date": "2023-09-03",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Keith",
+        "Keith Bell"
+      ],
+      "special_roles": [],
+      "entity_notes": "Former high-ranking police officer. Carmichael is fastest-growing constituency. Moved from Labour/Immigration to Housing in Sept 2023 reshuffle."
+    },
+    {
+      "node_id": "mp_glover_rolle_pia",
+      "full_name": "Pia Takita Glover-Rolle",
+      "common_name": "Pia Glover-Rolle",
+      "party": "PLP",
+      "constituency": "Golden Gates",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of State for Labour",
+          "short_title": "Minister of State for Labour",
+          "start_date": "2021-09-17",
+          "end_date": "2023-09-03"
+        },
+        {
+          "title": "Minister of Labour and the Public Service",
+          "short_title": "Minister of Labour",
+          "start_date": "2023-09-03",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Pia",
+        "Pia Glover-Rolle",
+        "Glover-Rolle"
+      ],
+      "special_roles": ["Deputy Leader of Government Business (assumed after Wilchcombe death)"],
+      "entity_notes": "Maiden name: Glover. Elevated from Minister of State to full Cabinet Minister in Sept 2023 reshuffle."
+    },
+    {
+      "node_id": "mp_moxey_ginger",
+      "full_name": "Ginger Maria Moxey",
+      "common_name": "Ginger Moxey",
+      "party": "PLP",
+      "constituency": "Pineridge",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister for Grand Bahama",
+          "short_title": "Minister for Grand Bahama",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Ginger",
+        "Ginger Moxey",
+        "Virginia Moxey"
+      ],
+      "special_roles": [],
+      "entity_notes": "Legal first name may be 'Virginia' in older records; 'Ginger' is universally recognized. PLP's executive authority on Grand Bahama."
+    },
+    {
+      "node_id": "mp_campbell_jomo",
+      "full_name": "Jomo Chaka Campbell",
+      "common_name": "Jomo Campbell",
+      "party": "PLP",
+      "constituency": "Centreville",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Succeeded former PM Perry Christie in Centreville",
+      "portfolios": [
+        {
+          "title": "Minister of State for Agriculture",
+          "short_title": "Minister of State for Agriculture",
+          "start_date": "2021-09-17",
+          "end_date": "2023-12-01"
+        },
+        {
+          "title": "Minister of Agriculture and Marine Resources",
+          "short_title": "Minister of Agriculture",
+          "start_date": "2023-12-01",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Jomo",
+        "Jomo Campbell"
+      ],
+      "special_roles": [],
+      "entity_notes": "Elevated from Minister of State to full Cabinet Minister late 2023. Attorney-at-law. Centreville is a historically significant PLP constituency."
+    },
+    {
+      "node_id": "mp_bowleg_mario",
+      "full_name": "Mario Keith Bowleg",
+      "common_name": "Mario Bowleg",
+      "party": "PLP",
+      "constituency": "Garden Hills",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of Youth, Sports and Culture",
+          "short_title": "Minister of Youth",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Mario",
+        "Coach",
+        "Mario Bowleg"
+      ],
+      "special_roles": [],
+      "entity_notes": "Alias 'Coach' is widely used by constituents and colleagues due to basketball background."
+    },
+    {
+      "node_id": "mp_laroda_myles",
+      "full_name": "Myles Kentworth LaRoda",
+      "common_name": "Myles LaRoda",
+      "party": "PLP",
+      "constituency": "Pinewood",
+      "is_cabinet": true,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of State for Social Services",
+          "short_title": "Minister of State for Social Services",
+          "start_date": "2021-09-17",
+          "end_date": "2024-01-02"
+        },
+        {
+          "title": "Minister of Social Services, Information and Broadcasting",
+          "short_title": "Minister of Social Services",
+          "start_date": "2024-01-02",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Myles",
+        "Myles LaRoda",
+        "Myles Laroda"
+      ],
+      "special_roles": [],
+      "entity_notes": "Spelling varies: 'LaRoda' vs 'Laroda' across sources. Promoted to full Minister in Jan 2024 adjustments."
+    },
+    {
+      "node_id": "mp_deveaux_patricia",
+      "full_name": "Patricia Ann Deveaux",
+      "common_name": "Patricia Deveaux",
+      "party": "PLP",
+      "constituency": "Bamboo Town",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "control",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated FNM incumbent Renward Wells",
+      "portfolios": [
+        {
+          "title": "Speaker of the House of Assembly",
+          "short_title": "Speaker",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Pat",
+        "Madam Speaker",
+        "Patricia Deveaux"
+      ],
+      "special_roles": ["Speaker of the House"],
+      "entity_notes": "CONTROL NODE: The Speaker governs debate but does not participate as a partisan actor. References to/from the Speaker have distinct edge semantics (procedural, not political). Second woman to serve as Speaker."
+    },
+    {
+      "node_id": "mp_bonaby_mckell",
+      "full_name": "McKell D. Bonaby",
+      "common_name": "McKell Bonaby",
+      "party": "PLP",
+      "constituency": "Mount Moriah",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Deputy Speaker of the House of Assembly",
+          "short_title": "Deputy Speaker",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "McKell",
+        "McKell Bonaby"
+      ],
+      "special_roles": ["Deputy Speaker", "Executive Chairman, Straw Market Authority"],
+      "entity_notes": "Attorney-at-law. Chairs Committee of the Whole House. Mount Moriah is a critical middle-class battleground."
+    },
+    {
+      "node_id": "mp_watson_wayde",
+      "full_name": "Wayde Alexander Watson",
+      "common_name": "Wayde Watson",
+      "party": "PLP",
+      "constituency": "Bain Town and Grants Town",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary, Ministry of Economic Affairs",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Wayde",
+        "Wayde Watson"
+      ],
+      "special_roles": [],
+      "entity_notes": "Technologist and grassroots organizer. Drives MyGateway portal digitization. Represents historic inner-city core of Nassau."
+    },
+    {
+      "node_id": "mp_strachan_jamahl",
+      "full_name": "Jamahl DeAngelo Strachan",
+      "common_name": "Jamahl Strachan",
+      "party": "PLP",
+      "constituency": "Nassau Village",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated former Speaker Halson Moultrie",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary, Ministry of Foreign Affairs",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Jamahl",
+        "Jamahl Strachan"
+      ],
+      "special_roles": [],
+      "entity_notes": "One of the youngest MPs in the House."
+    },
+    {
+      "node_id": "mp_lightbourne_leonardo",
+      "full_name": "Leonardo D. Lightbourne",
+      "common_name": "Leo Lightbourne",
+      "party": "PLP",
+      "constituency": "North Andros and Berry Islands",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary, Ministry of Agriculture",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Leo",
+        "Leo Lightbourne",
+        "Leonardo Lightbourne"
+      ],
+      "special_roles": [],
+      "entity_notes": "Represents the largest landmass in the Bahamas (Andros). Focused on BAMSI revitalization. Berry Islands provide contrasting wealthy-enclave demographic."
+    },
+    {
+      "node_id": "mp_miller_brice_leslia",
+      "full_name": "Leslia M. Miller-Brice",
+      "common_name": "Leslia Miller-Brice",
+      "party": "PLP",
+      "constituency": "Sea Breeze",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [],
+      "aliases": [
+        "Leslia",
+        "Leslia Miller-Brice",
+        "Leslia Miller"
+      ],
+      "special_roles": ["Government Whip", "Chair of Independence Secretariat", "Ambassador/High Commissioner to CARICOM"],
+      "entity_notes": "Daughter of Leslie 'Potcake' Miller (legendary PLP figure). Non-Cabinet but influential. 'Leslia Miller' appears in older references."
+    },
+    {
+      "node_id": "mp_rolle_bacchus",
+      "full_name": "Bacchus O. Rolle",
+      "common_name": "Bacchus Rolle",
+      "party": "PLP",
+      "constituency": "South Beach",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary / Minister of State for Aviation",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Bacchus",
+        "Bacchus Rolle"
+      ],
+      "special_roles": [],
+      "entity_notes": "Former sports administrator. Focuses on airport redevelopment."
+    },
+    {
+      "node_id": "mp_major_leroy",
+      "full_name": "Leroy N. Major",
+      "common_name": "Leroy Major",
+      "party": "PLP",
+      "constituency": "Southern Shores",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated Frankie Campbell (FNM)",
+      "portfolios": [],
+      "aliases": [
+        "Leroy",
+        "Leroy Major"
+      ],
+      "special_roles": ["Executive Chairman of BAIC"],
+      "entity_notes": "Focus on agriculture and light industry through BAIC chairmanship."
+    },
+    {
+      "node_id": "mp_pickstock_darron",
+      "full_name": "Darron Pickstock",
+      "common_name": "Darron Pickstock",
+      "party": "PLP",
+      "constituency": "Golden Isles",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2025",
+      "election_notes": "Won November 24, 2025 by-election (margin: 237 votes); sworn in December 3, 2025. Former Senator.",
+      "portfolios": [],
+      "aliases": [
+        "Darron",
+        "Darron Pickstock"
+      ],
+      "special_roles": [],
+      "entity_notes": "Newest MP in the House. Replaced Vaughn P. Miller (deceased Sept 28, 2025). PLP retained seat but with significantly narrower margin."
+    },
+    {
+      "node_id": "mp_rahming_lisa",
+      "full_name": "Lisa Tammy Rahming",
+      "common_name": "Lisa Rahming",
+      "party": "PLP",
+      "constituency": "Marathon",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "F",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Minister of State for Housing and Urban Renewal",
+          "short_title": "Minister of State for Housing",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Lisa",
+        "Lisa Rahming"
+      ],
+      "special_roles": [],
+      "entity_notes": "Known for intense ground game and social welfare outreach in Marathon."
+    },
+    {
+      "node_id": "mp_lundy_leon",
+      "full_name": "Leon E. Lundy",
+      "common_name": "Leon Lundy",
+      "party": "PLP",
+      "constituency": "Mangrove Cay and South Andros",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Backbencher",
+          "short_title": "Backbencher",
+          "start_date": "2021-09-17",
+          "end_date": "2024-01-02"
+        },
+        {
+          "title": "Minister of State, Disaster Risk Management (OPM)",
+          "short_title": "Minister of State for Disaster Risk Management",
+          "start_date": "2024-01-02",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Leon",
+        "Leon Lundy"
+      ],
+      "special_roles": [],
+      "entity_notes": "Promoted to Minister of State in Jan 2024 adjustments. Critical role given hurricane vulnerability."
+    },
+    {
+      "node_id": "mp_mcintosh_basil",
+      "full_name": "Basil Walton McIntosh",
+      "common_name": "Basil McIntosh",
+      "party": "PLP",
+      "constituency": "MICAL",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated FNM incumbent Miriam Emmanuel",
+      "portfolios": [
+        {
+          "title": "Minister of State for Aviation",
+          "short_title": "Minister of State for Aviation",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Basil",
+        "Basil McIntosh"
+      ],
+      "special_roles": [],
+      "entity_notes": "MICAL = Mayaguana, Inagua, Crooked Island, Acklins, Long Cay. Most logistically challenging constituency. Maintains 'lifeline' flights to remote southern islands."
+    },
+    {
+      "node_id": "mp_lightbourne_zane",
+      "full_name": "Zane Enrico Lightbourne",
+      "common_name": "Zane Lightbourne",
+      "party": "PLP",
+      "constituency": "Yamacraw",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Succeeded Melanie Griffin",
+      "portfolios": [
+        {
+          "title": "Minister of State for Environment",
+          "short_title": "Minister of State for Environment",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Zane",
+        "Zane Lightbourne"
+      ],
+      "special_roles": [],
+      "entity_notes": "Educator and trade unionist. Environment portfolio may be elevated following Vaughn Miller's death."
+    },
+    {
+      "node_id": "mp_cornish_kirk",
+      "full_name": "Kirk Daniel Cornish",
+      "common_name": "Kirk Cornish",
+      "party": "PLP",
+      "constituency": "North Abaco",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "Defeated FNM's Darren Henfield",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": "2023-08-01"
+        }
+      ],
+      "aliases": [
+        "Kirk",
+        "Kirk Cornish"
+      ],
+      "special_roles": [],
+      "entity_notes": "⚠ LEGAL: Charged with rape and assault (Aug 2023). PM Davis requested resignation as Parl. Sec. but Cornish refused to resign seat. Sits as PLP backbencher. Most vulnerable PLP seat."
+    },
+    {
+      "node_id": "mp_petty_sylvannus",
+      "full_name": "Sylvannus Petty",
+      "common_name": "Sylvannus Petty",
+      "party": "PLP",
+      "constituency": "North Eleuthera",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [],
+      "aliases": [
+        "Sylvannus",
+        "Sylvanus Petty",
+        "Sylvannus Petty"
+      ],
+      "special_roles": [],
+      "entity_notes": "⚠ POLITICAL: Resigned as WSC Chairman (late 2023) after contract-to-family-member scandal. Spelling varies: 'Sylvannus' / 'Sylvanus'. Politically damaged backbencher."
+    },
+    {
+      "node_id": "mp_smith_kingsley",
+      "full_name": "Kingsley Smith",
+      "common_name": "Kingsley Smith",
+      "party": "PLP",
+      "constituency": "West Grand Bahama and Bimini",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2023",
+      "election_notes": "Won November 22, 2023 by-election (57% to 33%). Former Chief Passport Officer.",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary, Ministry for Grand Bahama",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2023-11-22",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Kingsley",
+        "Kingsley Smith"
+      ],
+      "special_roles": [],
+      "entity_notes": "Replaced Obie Wilchcombe (deceased Sept 25, 2023). First Bahamian by-election since 2012."
+    },
+    {
+      "node_id": "mp_pinder_john",
+      "full_name": "John H.W. Pinder II",
+      "common_name": "John Pinder",
+      "party": "PLP",
+      "constituency": "Central and South Abaco",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Parliamentary Secretary, Ministry of Tourism",
+          "short_title": "Parliamentary Secretary",
+          "start_date": "2021-09-17",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "John Pinder",
+        "John Pinder II"
+      ],
+      "special_roles": [],
+      "entity_notes": "White Bahamian from prominent Abaco family. Watershed PLP victory in traditionally FNM territory. Post-Dorian anger factor."
+    },
+    {
+      "node_id": "mp_minnis_hubert",
+      "full_name": "Dr. Hubert Alexander Minnis, O.N.",
+      "common_name": "Dr. Hubert Minnis",
+      "party": "FNM",
+      "constituency": "Killarney",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2007",
+      "election_notes": "Four consecutive terms: 2007, 2012, 2017, 2021",
+      "portfolios": [
+        {
+          "title": "Prime Minister",
+          "short_title": "Prime Minister",
+          "start_date": "2017-05-11",
+          "end_date": "2021-09-16"
+        }
+      ],
+      "aliases": [
+        "Doc",
+        "Dr. Minnis",
+        "Hubert Minnis",
+        "Minnis"
+      ],
+      "special_roles": ["Former Prime Minister (2017-2021)", "Former FNM Leader (2014-2021)"],
+      "entity_notes": "ALIAS COLLISION: 'Doc' is also used for Dr. Michael Darville (mp_darville_michael). Context required. OB/GYN physician. Operates as 'wildcard' on opposition bench, frequently diverging from Pintard's positions. Persistent leadership shadow war within FNM."
+    },
+    {
+      "node_id": "mp_pintard_michael",
+      "full_name": "Michael Clifton Pintard",
+      "common_name": "Michael Pintard",
+      "party": "FNM",
+      "constituency": "Marco City",
+      "is_cabinet": false,
+      "is_opposition_frontbench": true,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2017",
+      "election_notes": "Re-elected 2021",
+      "portfolios": [
+        {
+          "title": "Leader of the Official Opposition",
+          "short_title": "Leader of the Opposition",
+          "start_date": "2021-11-01",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Michael",
+        "Pintard",
+        "Michael Pintard"
+      ],
+      "special_roles": ["Leader of the Official Opposition", "Leader of the FNM"],
+      "entity_notes": "Poet, playwright, HR consultant. Marco City is commercial hub of Freeport. Unique oratorical style. Faces internal pressure from Minnis supporters."
+    },
+    {
+      "node_id": "mp_thompson_kwasi",
+      "full_name": "James Kwasi M. Thompson",
+      "common_name": "Kwasi Thompson",
+      "party": "FNM",
+      "constituency": "East Grand Bahama",
+      "is_cabinet": false,
+      "is_opposition_frontbench": true,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2012",
+      "election_notes": "Three terms: 2012, 2017, 2021",
+      "portfolios": [
+        {
+          "title": "Shadow Minister of Finance",
+          "short_title": "Shadow Minister of Finance",
+          "start_date": "2021-11-01",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Kwasi",
+        "Kwasi Thompson",
+        "James Thompson"
+      ],
+      "special_roles": ["Shadow Minister of Finance", "Former Minister of State for Finance (Minnis admin)"],
+      "entity_notes": "Key intellectual asset for FNM. Primary critic of government fiscal policy. Closely aligned with Minnis faction but serves in Pintard's shadow cabinet due to indispensable expertise."
+    },
+    {
+      "node_id": "mp_cartwright_shanendon",
+      "full_name": "Shanendon E. Cartwright",
+      "common_name": "Shanendon Cartwright",
+      "party": "FNM",
+      "constituency": "St. Barnabas",
+      "is_cabinet": false,
+      "is_opposition_frontbench": true,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Deputy Leader of the Opposition",
+          "short_title": "Deputy Leader of the Opposition",
+          "start_date": "2021-11-01",
+          "end_date": null
+        },
+        {
+          "title": "Shadow Minister for National Security",
+          "short_title": "Shadow Minister for National Security",
+          "start_date": "2021-11-01",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Shanendon",
+        "Shanendon Cartwright",
+        "Cartwright"
+      ],
+      "special_roles": ["FNM Deputy Leader"],
+      "entity_notes": "Unifying figure within FNM. Strong debater — directly challenges Minister Munroe's crime statistics."
+    },
+    {
+      "node_id": "mp_white_adrian",
+      "full_name": "Adrian R. White",
+      "common_name": "Adrian White",
+      "party": "FNM",
+      "constituency": "St. Anne's",
+      "is_cabinet": false,
+      "is_opposition_frontbench": true,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2021",
+      "election_notes": "",
+      "portfolios": [
+        {
+          "title": "Shadow Attorney General",
+          "short_title": "Shadow Attorney General",
+          "start_date": "2021-11-01",
+          "end_date": null
+        }
+      ],
+      "aliases": [
+        "Adrian",
+        "Adrian White"
+      ],
+      "special_roles": ["Shadow Attorney General"],
+      "entity_notes": "ALIAS COLLISION: First name 'Adrian' shared with Adrian Gibson (mp_gibson_adrian, Long Island, FNM). Context required. White Bahamian lawyer. St. Anne's is traditional FNM stronghold."
+    },
+    {
+      "node_id": "mp_lewis_iram",
+      "full_name": "Iram Dewitt Lewis",
+      "common_name": "Iram Lewis",
+      "party": "COI",
+      "constituency": "Central Grand Bahama",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2017",
+      "election_notes": "Re-elected 2021 (as FNM); defected to COI April 2, 2025",
+      "portfolios": [
+        {
+          "title": "Minister (Minnis administration)",
+          "short_title": "Minister",
+          "start_date": "2017-05-11",
+          "end_date": "2021-09-16"
+        }
+      ],
+      "aliases": [
+        "Iram",
+        "Iram Lewis"
+      ],
+      "special_roles": ["Sole COI representative in the House"],
+      "entity_notes": "Olympian and architect. Defected from FNM to Coalition of Independents (COI) on April 2, 2025. Broke two-party duopoly in House for first time in modern history. Originally FNM — party field must be time-aware for pre-April 2025 debates."
+    },
+    {
+      "node_id": "mp_gibson_adrian",
+      "full_name": "Adrian Gibson",
+      "common_name": "Adrian Gibson",
+      "party": "FNM",
+      "constituency": "Long Island",
+      "is_cabinet": false,
+      "is_opposition_frontbench": false,
+      "gender": "M",
+      "node_type": "debater",
+      "seat_status": "active",
+      "first_elected": "2017",
+      "election_notes": "Re-elected 2021",
+      "portfolios": [],
+      "aliases": [
+        "Adrian",
+        "Adrian Gibson",
+        "Gibson"
+      ],
+      "special_roles": [],
+      "entity_notes": "⚠ LEGAL: 98-count corruption trial (bribery, fraud, extortion related to WSC tenure 2017-2021). Largely silent in debates. ALIAS COLLISION: First name 'Adrian' shared with Adrian White (mp_white_adrian, St. Anne's, FNM). Must disambiguate by constituency or surname."
+    }
+  ],
+  "deceased_mps": [
+    {
+      "node_id": "mp_wilchcombe_obie",
+      "full_name": "Obadiah H. Wilchcombe",
+      "common_name": "Obie Wilchcombe",
+      "party": "PLP",
+      "constituency": "West Grand Bahama and Bimini",
+      "gender": "M",
+      "date_of_death": "2023-09-25",
+      "role_at_death": "Minister of Social Services and Community Development; Leader of Government Business in the House",
+      "replaced_by": "mp_smith_kingsley",
+      "aliases": ["Obie", "Obie Wilchcombe"],
+      "entity_notes": "Veteran MP. His death triggered the first Bahamian by-election since 2012. References to 'Obie' or 'The late Member for West Grand Bahama' in post-Sept 2023 debates are historical."
+    },
+    {
+      "node_id": "mp_miller_vaughn",
+      "full_name": "Vaughn P. Miller",
+      "common_name": "Vaughn Miller",
+      "party": "PLP",
+      "constituency": "Golden Isles",
+      "gender": "M",
+      "date_of_death": "2025-09-28",
+      "role_at_death": "Minister of the Environment and Natural Resources",
+      "replaced_by": "mp_pickstock_darron",
+      "aliases": ["Vaughn", "Vaughn Miller"],
+      "entity_notes": "Died age 64. Originally elected as FNM in 2017; crossed floor to PLP during Minnis admin after opposing VAT hike; re-elected as PLP in 2021."
+    }
+  ],
+  "senate_cabinet_members": [
+    {
+      "name": "Ryan Pinder",
+      "portfolio": "Attorney General and Minister of Legal Affairs",
+      "notes": "Non-MP. Sits in Senate. May be referenced in House debate but is NOT a House node."
+    },
+    {
+      "name": "Michael Halkitis",
+      "portfolio": "Minister of Economic Affairs",
+      "notes": "Non-MP. Sits in Senate. May be referenced in House debate but is NOT a House node."
+    }
+  ],
+  "alias_collisions": [
+    {
+      "alias": "Doc",
+      "claimants": ["mp_darville_michael", "mp_minnis_hubert"],
+      "resolution_strategy": "Party context (PLP vs FNM), constituency context, or temporal: if pre-2021, likely Minnis; if post-2021 in ministerial context, likely Darville"
+    },
+    {
+      "alias": "Adrian",
+      "claimants": ["mp_white_adrian", "mp_gibson_adrian"],
+      "resolution_strategy": "Both FNM. Disambiguate by surname, constituency (St. Anne's vs Long Island), or shadow portfolio context"
+    },
+    {
+      "alias": "Minister of Works",
+      "claimants": ["mp_sears_alfred", "mp_sweeting_clay"],
+      "resolution_strategy": "Temporal: Sears held Works until Sept 3, 2023; Sweeting holds Works from Sept 3, 2023 onward"
+    },
+    {
+      "alias": "Minister of Housing",
+      "claimants": ["mp_coleby_davis_jobeth", "mp_bell_keith"],
+      "resolution_strategy": "Temporal: Coleby-Davis held Housing until Sept 3, 2023; Bell holds Housing from Sept 3, 2023 onward"
+    },
+    {
+      "alias": "Minister of Agriculture",
+      "claimants": ["mp_sweeting_clay", "mp_campbell_jomo"],
+      "resolution_strategy": "Temporal: Sweeting held Agriculture until Sept 3, 2023; Campbell holds Agriculture from late 2023 onward"
+    },
+    {
+      "alias": "Lightbourne",
+      "claimants": ["mp_lightbourne_leonardo", "mp_lightbourne_zane"],
+      "resolution_strategy": "Disambiguate by constituency (North Andros vs Yamacraw), first name, or portfolio (Agriculture vs Environment)"
+    }
+  ],
+  "constituency_geographic_index": {
+    "new_providence": [
+      "Bain Town and Grants Town",
+      "Bamboo Town",
+      "Carmichael",
+      "Centreville",
+      "Elizabeth",
+      "Englerston",
+      "Fort Charlotte",
+      "Fox Hill",
+      "Freetown",
+      "Garden Hills",
+      "Golden Gates",
+      "Golden Isles",
+      "Killarney",
+      "Marathon",
+      "Mount Moriah",
+      "Nassau Village",
+      "Pinewood",
+      "Sea Breeze",
+      "South Beach",
+      "Southern Shores",
+      "St. Anne's",
+      "St. Barnabas",
+      "Tall Pines",
+      "Yamacraw"
+    ],
+    "grand_bahama": [
+      "Central Grand Bahama",
+      "East Grand Bahama",
+      "Marco City",
+      "Pineridge",
+      "West Grand Bahama and Bimini"
+    ],
+    "family_islands": [
+      "Cat Island, Rum Cay and San Salvador",
+      "Central and South Abaco",
+      "Central and South Eleuthera",
+      "Exumas and Ragged Island",
+      "Long Island",
+      "Mangrove Cay and South Andros",
+      "MICAL",
+      "North Abaco",
+      "North Andros and Berry Islands",
+      "North Eleuthera"
+    ]
+  }
+}

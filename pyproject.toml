@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "graphhansard"
+version = "0.1.0"
+description = "Civic technology platform applying graph theory to Bahamian parliamentary proceedings"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Dr. Aris Moncur", email = "caribdigital@users.noreply.github.com"},
+]
+keywords = ["parliament", "bahamas", "graph", "hansard", "civic-tech", "nlp"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "rapidfuzz>=3.0",
+    "networkx>=3.0",
+]
+
+[project.optional-dependencies]
+miner = [
+    "yt-dlp",
+]
+brain = [
+    "openai-whisper",
+    "faster-whisper",
+    "pyannote.audio>=3.0",
+    "whisperx",
+    "spacy>=3.0",
+    "transformers",
+    "torch",
+]
+dashboard = [
+    "streamlit>=1.0",
+    "pyvis",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+]
+all = [
+    "graphhansard[miner,brain,dashboard,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/caribdigital/graphhansard"
+Repository = "https://github.com/caribdigital/graphhansard"
+Issues = "https://github.com/caribdigital/graphhansard/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/graphhansard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
