@@ -10,7 +10,7 @@ from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class DownloadStatus(str, Enum):
@@ -51,7 +51,7 @@ class AudioCatalogue:
         """
         self.catalogue_path = Path(catalogue_path)
         self.entries: list[SessionAudio] = []
-        
+
         # Load existing catalogue if it exists
         if self.catalogue_path.exists():
             self._load()
@@ -87,7 +87,7 @@ class AudioCatalogue:
                     break
         else:
             self.entries.append(entry)
-        
+
         self._save()
 
     def is_duplicate(self, video_id: str) -> bool:

@@ -7,9 +7,7 @@ rate limiting, and resumable downloads per SRD §7.2 (MN-1 through MN-5).
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
-import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,14 +46,14 @@ class SessionDownloader:
         self.sleep_interval = sleep_interval
         self.max_downloads = max_downloads
         self.download_count = 0
-        
+
         # Create archive directory if it doesn't exist
         self.archive_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize catalogue
         catalogue_path = self.archive_dir / "catalogue.json"
         self.catalogue = AudioCatalogue(str(catalogue_path))
-        
+
         # Download archive file for yt-dlp resumability
         self.download_archive_path = self.archive_dir / "download_archive.txt"
 
@@ -70,9 +68,12 @@ class SessionDownloader:
         """
         if output_template is None:
             output_template = str(
-                self.archive_dir / "%(upload_date>%Y)s" / "%(upload_date)s" / "%(id)s.%(ext)s"
+                self.archive_dir
+                / "%(upload_date>%Y)s"
+                / "%(upload_date)s"
+                / "%(id)s.%(ext)s"
             )
-        
+
         opts = {
             "format": "bestaudio/best",
             "postprocessors": [{
@@ -88,11 +89,11 @@ class SessionDownloader:
             "writeinfojson": True,
             "writethumbnail": False,
         }
-        
+
         # Add cookies if provided
         if self.cookies_path:
             opts["cookiefile"] = self.cookies_path
-        
+
         return opts
 
     def discover_sessions(self, channel_url: str) -> list[dict]:
@@ -105,21 +106,21 @@ class SessionDownloader:
             List of video metadata dictionaries
         """
         logger.info(f"Discovering videos from {channel_url}")
-        
+
         opts = {
             "quiet": True,
             "extract_flat": True,
             "skip_download": True,
         }
-        
+
         if self.cookies_path:
             opts["cookiefile"] = self.cookies_path
-        
+
         videos = []
         with yt_dlp.YoutubeDL(opts) as ydl:
             try:
                 info = ydl.extract_info(channel_url, download=False)
-                
+
                 # Handle both channel and playlist URLs
                 if "entries" in info:
                     for entry in info["entries"]:
@@ -140,11 +141,11 @@ class SessionDownloader:
                         "duration": info.get("duration"),
                         "upload_date": info.get("upload_date"),
                     })
-                    
+
             except Exception as e:
                 logger.error(f"Error discovering sessions: {e}")
                 raise
-        
+
         logger.info(f"Discovered {len(videos)} videos")
         return videos
 
@@ -158,20 +159,23 @@ class SessionDownloader:
             Dictionary with download status and metadata
         """
         if self.download_count >= self.max_downloads:
-            logger.warning(f"Max downloads ({self.max_downloads}) reached, skipping {video_url}")
+            logger.warning(
+                f"Max downloads ({self.max_downloads}) reached, "
+                f"skipping {video_url}"
+            )
             return {
                 "status": "skipped_max_reached",
                 "url": video_url,
             }
-        
+
         logger.info(f"Downloading {video_url}")
-        
+
         opts = self._get_ydl_opts()
-        
+
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(video_url, download=True)
-                
+
                 # Get the actual downloaded file path
                 if "requested_downloads" in info and info["requested_downloads"]:
                     filepath = info["requested_downloads"][0].get("filepath")
@@ -181,34 +185,38 @@ class SessionDownloader:
                     year = upload_date[:4] if len(upload_date) >= 4 else "unknown"
                     video_id = info.get("id", "unknown")
                     ext = "opus"  # Our preferred format
-                    filepath = self.archive_dir / year / upload_date / f"{video_id}.{ext}"
-                
+                    filepath = (
+                        self.archive_dir / year / upload_date / f"{video_id}.{ext}"
+                    )
+
                 filepath = Path(filepath)
-                
+
                 # Calculate file hash if file exists
                 file_hash = ""
                 if filepath.exists():
                     with open(filepath, "rb") as f:
                         file_hash = hashlib.sha256(f.read()).hexdigest()
-                
+
                 # Create catalogue entry
                 upload_date_str = info.get("upload_date", "")
                 upload_date_obj = None
                 if upload_date_str:
                     try:
-                        upload_date_obj = datetime.strptime(upload_date_str, "%Y%m%d").date()
+                        upload_date_obj = datetime.strptime(
+                            upload_date_str, "%Y%m%d"
+                        ).date()
                     except ValueError:
                         pass
-                
+
                 # Extract audio format info
                 audio_format = "opus"
                 audio_bitrate = 128
-                
+
                 if "requested_downloads" in info and info["requested_downloads"]:
                     req_dl = info["requested_downloads"][0]
                     audio_format = req_dl.get("ext", "opus")
                     audio_bitrate = req_dl.get("abr", 128) or 128
-                
+
                 entry = SessionAudio(
                     video_id=info.get("id", ""),
                     title=info.get("title", ""),
@@ -217,43 +225,50 @@ class SessionDownloader:
                     duration_seconds=info.get("duration", 0) or 0,
                     audio_format=audio_format,
                     audio_bitrate_kbps=int(audio_bitrate),
-                    file_path=str(filepath.relative_to(self.archive_dir)) if filepath.exists() else str(filepath),
+                    file_path=(
+                        str(filepath.relative_to(self.archive_dir))
+                        if filepath.exists()
+                        else str(filepath)
+                    ),
                     file_hash_sha256=file_hash,
                     download_timestamp=datetime.now(timezone.utc),
                     source_url=info.get("webpage_url", video_url),
                     status=DownloadStatus.DOWNLOADED,
                     notes=None,
                 )
-                
+
                 # Add to catalogue
                 self.catalogue.add_entry(entry)
-                
+
                 self.download_count += 1
-                
+
                 # Rate limiting
                 if self.download_count < self.max_downloads:
-                    logger.info(f"Sleeping for {self.sleep_interval} seconds (rate limiting)")
+                    logger.info(
+                        f"Sleeping for {self.sleep_interval} seconds "
+                        f"(rate limiting)"
+                    )
                     time.sleep(self.sleep_interval)
-                
+
                 return {
                     "status": "success",
                     "url": video_url,
                     "video_id": info.get("id"),
                     "filepath": str(filepath),
                 }
-                
+
         except Exception as e:
             logger.error(f"Error downloading {video_url}: {e}")
-            
+
             # Try to extract video ID even on failure
             video_id = None
             try:
                 with yt_dlp.YoutubeDL({"quiet": True}) as ydl:
                     info = ydl.extract_info(video_url, download=False)
                     video_id = info.get("id")
-            except:
+            except Exception:
                 pass
-            
+
             # Record failure in catalogue
             if video_id:
                 entry = SessionAudio(
@@ -271,7 +286,7 @@ class SessionDownloader:
                     notes=str(e),
                 )
                 self.catalogue.add_entry(entry)
-            
+
             return {
                 "status": "failed",
                 "url": video_url,
@@ -285,28 +300,34 @@ class SessionDownloader:
             channel_url: YouTube channel URL or playlist URL
         """
         logger.info(f"Starting full scrape of {channel_url}")
-        
+
         videos = self.discover_sessions(channel_url)
-        
+
         logger.info(f"Found {len(videos)} videos to process")
-        
+
         for i, video in enumerate(videos, 1):
             if self.download_count >= self.max_downloads:
-                logger.warning(f"Reached max downloads limit ({self.max_downloads}), stopping")
+                logger.warning(
+                    f"Reached max downloads limit ({self.max_downloads}), "
+                    f"stopping"
+                )
                 break
-            
+
             video_url = video.get("url")
             video_id = video.get("id")
-            
+
             # Check if already downloaded
             if self.catalogue.is_duplicate(video_id):
-                logger.info(f"[{i}/{len(videos)}] Skipping {video_id} (already in catalogue)")
+                logger.info(
+                    f"[{i}/{len(videos)}] Skipping {video_id} "
+                    f"(already in catalogue)"
+                )
                 continue
-            
+
             logger.info(f"[{i}/{len(videos)}] Processing {video_url}")
             result = self.download_session(video_url)
             logger.info(f"[{i}/{len(videos)}] Result: {result['status']}")
-        
+
         logger.info(f"Full scrape complete. Downloaded {self.download_count} sessions")
 
     def run_incremental_scrape(self, channel_url: str) -> None:
@@ -318,7 +339,7 @@ class SessionDownloader:
             channel_url: YouTube channel URL or playlist URL
         """
         logger.info(f"Starting incremental scrape of {channel_url}")
-        
+
         # For incremental scrape, yt-dlp will automatically skip videos
         # listed in the download archive file
         self.run_full_scrape(channel_url)

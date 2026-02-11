@@ -4,11 +4,10 @@ Covers: download pipeline, metadata catalogue, CLI.
 See Issues #6 through #8.
 """
 
-import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -19,7 +18,7 @@ from graphhansard.miner.downloader import SessionDownloader
 
 class TestSessionAudio:
     """Test SessionAudio schema validation."""
-    
+
     def test_session_audio_creation(self):
         """Test creating a valid SessionAudio object."""
         entry = SessionAudio(
@@ -35,12 +34,12 @@ class TestSessionAudio:
             source_url="https://youtube.com/watch?v=test123",
             status=DownloadStatus.DOWNLOADED,
         )
-        
+
         assert entry.video_id == "test123"
         assert entry.title == "Test Session"
         assert entry.audio_format == "opus"
         assert entry.status == DownloadStatus.DOWNLOADED
-    
+
     def test_session_audio_with_optional_fields(self):
         """Test SessionAudio with optional fields."""
         entry = SessionAudio(
@@ -58,29 +57,29 @@ class TestSessionAudio:
             status=DownloadStatus.DOWNLOADED,
             notes="Test note",
         )
-        
+
         assert entry.parsed_date == datetime(2024, 1, 15).date()
         assert entry.notes == "Test note"
 
 
 class TestAudioCatalogue:
     """Test AudioCatalogue metadata management."""
-    
+
     def test_catalogue_initialization_creates_file(self):
         """Test that initializing a catalogue creates the file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
-            
+
             assert catalogue_path.exists()
             assert catalogue.get_all_entries() == []
-    
+
     def test_catalogue_add_entry(self):
         """Test adding an entry to the catalogue."""
         with tempfile.TemporaryDirectory() as tmpdir:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
-            
+
             entry = SessionAudio(
                 video_id="test789",
                 title="Test Session 3",
@@ -94,19 +93,19 @@ class TestAudioCatalogue:
                 source_url="https://youtube.com/watch?v=test789",
                 status=DownloadStatus.DOWNLOADED,
             )
-            
+
             catalogue.add_entry(entry)
             entries = catalogue.get_all_entries()
-            
+
             assert len(entries) == 1
             assert entries[0].video_id == "test789"
-    
+
     def test_catalogue_is_duplicate(self):
         """Test duplicate detection."""
         with tempfile.TemporaryDirectory() as tmpdir:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
-            
+
             entry = SessionAudio(
                 video_id="test999",
                 title="Test Session 4",
@@ -120,17 +119,17 @@ class TestAudioCatalogue:
                 source_url="https://youtube.com/watch?v=test999",
                 status=DownloadStatus.DOWNLOADED,
             )
-            
+
             assert not catalogue.is_duplicate("test999")
             catalogue.add_entry(entry)
             assert catalogue.is_duplicate("test999")
             assert not catalogue.is_duplicate("other_id")
-    
+
     def test_catalogue_persistence(self):
         """Test that catalogue persists across reloads."""
         with tempfile.TemporaryDirectory() as tmpdir:
             catalogue_path = Path(tmpdir) / "catalogue.json"
-            
+
             # Create and add entry
             catalogue1 = AudioCatalogue(str(catalogue_path))
             entry = SessionAudio(
@@ -147,20 +146,20 @@ class TestAudioCatalogue:
                 status=DownloadStatus.DOWNLOADED,
             )
             catalogue1.add_entry(entry)
-            
+
             # Reload catalogue
             catalogue2 = AudioCatalogue(str(catalogue_path))
             entries = catalogue2.get_all_entries()
-            
+
             assert len(entries) == 1
             assert entries[0].video_id == "persist123"
-    
+
     def test_catalogue_update_existing_entry(self):
         """Test updating an existing entry."""
         with tempfile.TemporaryDirectory() as tmpdir:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
-            
+
             # Add initial entry
             entry1 = SessionAudio(
                 video_id="update123",
@@ -176,7 +175,7 @@ class TestAudioCatalogue:
                 status=DownloadStatus.DOWNLOADED,
             )
             catalogue.add_entry(entry1)
-            
+
             # Update with new entry
             entry2 = SessionAudio(
                 video_id="update123",
@@ -192,7 +191,7 @@ class TestAudioCatalogue:
                 status=DownloadStatus.DOWNLOADED,
             )
             catalogue.add_entry(entry2)
-            
+
             entries = catalogue.get_all_entries()
             assert len(entries) == 1
             assert entries[0].title == "Updated Title"
@@ -200,7 +199,7 @@ class TestAudioCatalogue:
 
 class TestSessionDownloader:
     """Test SessionDownloader functionality."""
-    
+
     def test_downloader_initialization(self):
         """Test SessionDownloader initialization."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -210,12 +209,12 @@ class TestSessionDownloader:
                 sleep_interval=1,
                 max_downloads=10,
             )
-            
+
             assert downloader.archive_dir == Path(tmpdir)
             assert downloader.sleep_interval == 1
             assert downloader.max_downloads == 10
             assert downloader.download_count == 0
-    
+
     @patch("yt_dlp.YoutubeDL")
     def test_discover_sessions(self, mock_ytdl_class):
         """Test discovering sessions from a channel."""
@@ -241,14 +240,14 @@ class TestSessionDownloader:
                     },
                 ]
             }
-            
+
             downloader = SessionDownloader(archive_dir=tmpdir)
             videos = downloader.discover_sessions("https://youtube.com/@TestChannel")
-            
+
             assert len(videos) == 2
             assert videos[0]["id"] == "video1"
             assert videos[1]["id"] == "video2"
-    
+
     @patch("time.sleep")
     @patch("yt_dlp.YoutubeDL")
     def test_download_session(self, mock_ytdl_class, mock_sleep):
@@ -260,7 +259,7 @@ class TestSessionDownloader:
             date_dir.mkdir(parents=True)
             test_file = date_dir / "testvideo.opus"
             test_file.write_bytes(b"fake audio data")
-            
+
             # Mock yt-dlp response
             mock_ytdl = MagicMock()
             mock_ytdl_class.return_value.__enter__.return_value = mock_ytdl
@@ -276,14 +275,14 @@ class TestSessionDownloader:
                     "abr": 128,
                 }],
             }
-            
+
             downloader = SessionDownloader(
                 archive_dir=tmpdir,
                 sleep_interval=1,
                 max_downloads=10,
             )
             result = downloader.download_session("https://youtube.com/watch?v=testvideo")
-            
+
             assert result["status"] == "success"
             assert result["video_id"] == "testvideo"
             assert downloader.download_count == 1
@@ -291,23 +290,23 @@ class TestSessionDownloader:
 
 class TestCLI:
     """Test CLI argument parsing and command dispatch."""
-    
+
     def test_cli_no_command(self, capsys):
         """Test CLI with no command shows help."""
         exit_code = main([])
-        
+
         assert exit_code == 1
         captured = capsys.readouterr()
         assert "GraphHansard Audio Ingestion Pipeline" in captured.out
-    
+
     def test_cli_scrape_help(self, capsys):
         """Test scrape command help."""
         with pytest.raises(SystemExit):
             main(["scrape", "--help"])
-        
+
         captured = capsys.readouterr()
         assert "Full scrape" in captured.out
-    
+
     def test_cli_status_no_catalogue(self, capsys):
         """Test status command with no catalogue."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -317,23 +316,23 @@ class TestCLI:
                 os.chdir(tmpdir)
                 exit_code = main(["status"])
                 assert exit_code == 0
-                
+
                 captured = capsys.readouterr()
                 assert "No catalogue found" in captured.out
             finally:
                 os.chdir(old_cwd)
-    
+
     def test_cli_add_manual(self):
         """Test add-manual command."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a fake audio file
             test_file = Path(tmpdir) / "test.opus"
             test_file.write_bytes(b"fake audio")
-            
+
             # Create archive directory
             archive_dir = Path(tmpdir) / "archive"
             archive_dir.mkdir()
-            
+
             import os
             old_cwd = os.getcwd()
             try:
@@ -344,13 +343,13 @@ class TestCLI:
                     "--date", "2024-01-01",
                     "--title", "Manual Session"
                 ])
-                
+
                 assert exit_code == 0
-                
+
                 # Check catalogue was created
                 catalogue_path = archive_dir / "catalogue.json"
                 assert catalogue_path.exists()
-                
+
                 # Verify entry
                 catalogue = AudioCatalogue(str(catalogue_path))
                 entries = catalogue.get_all_entries()
