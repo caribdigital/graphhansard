@@ -7,8 +7,7 @@ See Issues #1 through #5.
 from datetime import date
 from pathlib import Path
 
-from graphhansard.golden_record.models import GoldenRecord, MPNode
-
+from graphhansard.golden_record.models import GoldenRecord
 
 GOLDEN_RECORD_PATH = Path(__file__).parent.parent / "golden_record" / "mps.json"
 
@@ -79,7 +78,17 @@ class TestDateParsing:
         """Current portfolios have end_date=None."""
         record = _load_record()
         pm = next(mp for mp in record.mps if mp.node_id == "mp_davis_brave")
-        assert pm.portfolios[0].end_date is None
+        # Select the Prime Minister portfolio(s) by title/short_title rather than assuming index 0.
+        pm_portfolios = [
+            p
+            for p in pm.portfolios
+            if getattr(p, "short_title", None) == "Prime Minister"
+            or getattr(p, "title", None) == "Prime Minister"
+        ]
+        assert pm_portfolios, "Prime Minister portfolio not found for mp_davis_brave"
+        assert all(p.end_date is None for p in pm_portfolios), (
+            "Active Prime Minister portfolios should have end_date=None"
+        )
 
 
 class TestComputedAliases:
@@ -98,7 +107,8 @@ class TestComputedAliases:
     def test_total_aliases_at_least_357(self):
         """Total unique aliases across all MPs >= 357."""
         record = _load_record()
-        total = sum(len(mp.all_aliases) for mp in record.mps)
+        all_aliases = {alias for mp in record.mps for alias in mp.all_aliases}
+        total = len(all_aliases)
         assert total >= 357, f"Total aliases {total} < 357"
 
     def test_constituency_aliases_generated(self):
@@ -152,7 +162,7 @@ class TestTemporalQueries:
         """PortfolioTenure.is_active_on works correctly."""
         record = _load_record()
         sears = next(mp for mp in record.mps if mp.node_id == "mp_sears_alfred")
-        works = sears.portfolios[0]  # Minister of Works, 2021-09-17 to 2023-09-03
+        works = next(p for p in sears.portfolios if p.short_title == "Minister of Works")  # 2021-09-17 to 2023-09-03
         assert works.is_active_on(date(2023, 8, 1))
         assert not works.is_active_on(date(2023, 10, 1))
 

@@ -11,7 +11,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, Field
 
-
 # ---------------------------------------------------------------------------
 # Date coercion: JSON stores ISO-8601 strings; we want datetime.date objects
 # ---------------------------------------------------------------------------
@@ -278,6 +277,6 @@ class GoldenRecord(BaseModel):
         result: list[MPNode] = []
         for mp in self.mps:
             alias_set = mp.aliases_on(query_date) if query_date else mp.all_aliases
-            if normalized in [a.lower() for a in alias_set]:
+            if any(a.lower() == normalized for a in alias_set):
                 result.append(mp)
         return result
