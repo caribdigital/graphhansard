@@ -78,17 +78,8 @@ class TestDateParsing:
         """Current portfolios have end_date=None."""
         record = _load_record()
         pm = next(mp for mp in record.mps if mp.node_id == "mp_davis_brave")
-        # Select the Prime Minister portfolio(s) by title/short_title rather than assuming index 0.
-        pm_portfolios = [
-            p
-            for p in pm.portfolios
-            if getattr(p, "short_title", None) == "Prime Minister"
-            or getattr(p, "title", None) == "Prime Minister"
-        ]
-        assert pm_portfolios, "Prime Minister portfolio not found for mp_davis_brave"
-        assert all(p.end_date is None for p in pm_portfolios), (
-            "Active Prime Minister portfolios should have end_date=None"
-        )
+        pm_portfolio = next(p for p in pm.portfolios if p.short_title == "Prime Minister")
+        assert pm_portfolio.end_date is None
 
 
 class TestComputedAliases:
@@ -215,4 +206,5 @@ class TestTemporalQueries:
         """Portfolios with null end_date are active today."""
         record = _load_record()
         pm = next(mp for mp in record.mps if mp.node_id == "mp_davis_brave")
-        assert pm.portfolios[0].is_active_on(date.today())
+        pm_portfolio = next(p for p in pm.portfolios if p.short_title == "Prime Minister")
+        assert pm_portfolio.is_active_on(date.today())
