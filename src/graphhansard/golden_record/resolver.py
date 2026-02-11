@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from rapidfuzz import fuzz
@@ -239,7 +239,7 @@ class AliasResolver:
             {
                 "mention": mention,
                 "debate_date": debate_date,
-                "timestamp": str(date.today()),
+                "timestamp": datetime.now().isoformat(),
             }
         )
 

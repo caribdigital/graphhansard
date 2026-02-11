@@ -31,7 +31,8 @@ class TestAliasResolverInit:
 
     def test_index_has_expected_size(self, resolver):
         """Index contains expected number of unique aliases."""
-        # Should have at least 357 aliases mentioned in README
+        # Should have at least 357 aliases (README baseline)
+        # Current implementation generates 386 unique aliases
         assert len(resolver._alias_index) >= 357
 
     def test_custom_fuzzy_threshold(self):
