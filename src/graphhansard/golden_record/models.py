@@ -255,8 +255,10 @@ class GoldenRecord(BaseModel):
 
     # -- Temporal query methods (GR-3) --------------------------------------
 
-    def who_held_portfolio(self, short_title: str, query_date: date) -> list[MPNode]:
-        """Return all MPs who held the given portfolio (by short_title) on query_date."""
+    def who_held_portfolio(
+        self, short_title: str, query_date: date
+    ) -> list[MPNode]:
+        """Return all MPs who held the given portfolio on query_date."""
         result: list[MPNode] = []
         for mp in self.mps:
             for p in mp.portfolios:
@@ -271,7 +273,7 @@ class GoldenRecord(BaseModel):
         """Return all MPs for whom the given alias matches (case-insensitive).
 
         If query_date is provided, only temporally valid aliases are checked.
-        The full resolution cascade (fuzzy matching, etc.) is in resolver.py (Issue #18).
+        The full resolution cascade (fuzzy matching, etc.) is in resolver.py.
         """
         normalized = alias.strip().lower()
         result: list[MPNode] = []

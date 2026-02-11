@@ -5,12 +5,11 @@ collision handling, confidence scores, and unresolved logging.
 See Issue #18 (GR: Alias Resolution API).
 """
 
-from datetime import date
 from pathlib import Path
 
 import pytest
 
-from graphhansard.golden_record.resolver import AliasResolver, ResolutionResult
+from graphhansard.golden_record.resolver import AliasResolver
 
 GOLDEN_RECORD_PATH = Path(__file__).parent.parent / "golden_record" / "mps.json"
 
@@ -103,8 +102,8 @@ class TestFuzzyMatch:
 
     def test_fuzzy_match_partial(self, resolver):
         """Fuzzy match on slightly misspelled constituency."""
-        # Close match with typo
-        result = resolver.resolve("Member for Exuma and Ragged Island")  # Missing 's' in Exumas
+        # Close match with typo (missing 's' in Exumas)
+        result = resolver.resolve("Member for Exuma and Ragged Island")
         assert result.node_id == "mp_cooper_chester"
         assert result.method == "fuzzy"
 

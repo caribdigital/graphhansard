@@ -24,7 +24,7 @@ def main():
     print(f"Loading Golden Record from {golden_record_path}...")
     resolver = AliasResolver(str(golden_record_path))
 
-    print(f"Building inverted alias index...")
+    print("Building inverted alias index...")
     print(f"  Total unique aliases: {len(resolver._alias_index)}")
 
     # Count collisions
@@ -36,7 +36,7 @@ def main():
     resolver.save_index(str(output_path))
 
     print(f"✅ Done. Index saved to {output_path}")
-    print(f"\nExample entries:")
+    print("\nExample entries:")
     for i, (alias, node_ids) in enumerate(list(resolver._alias_index.items())[:5]):
         print(f"  '{alias}' -> {node_ids}")
 
