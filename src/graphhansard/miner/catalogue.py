@@ -5,9 +5,12 @@ Manages the archive/catalogue.json file per SRD §7.4 (MN-6, MN-7, MN-8).
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+import json
 from datetime import date, datetime
 from enum import Enum
+from pathlib import Path
+
+from pydantic import BaseModel
 
 
 class DownloadStatus(str, Enum):
@@ -41,16 +44,67 @@ class AudioCatalogue:
     """
 
     def __init__(self, catalogue_path: str = "archive/catalogue.json"):
-        raise NotImplementedError("AudioCatalogue not yet implemented — see Issue #7")
+        """Initialize the AudioCatalogue.
+
+        Args:
+            catalogue_path: Path to the catalogue JSON file
+        """
+        self.catalogue_path = Path(catalogue_path)
+        self.entries: list[SessionAudio] = []
+
+        # Load existing catalogue if it exists
+        if self.catalogue_path.exists():
+            self._load()
+        else:
+            # Create parent directory if it doesn't exist
+            self.catalogue_path.parent.mkdir(parents=True, exist_ok=True)
+            self._save()
+
+    def _load(self) -> None:
+        """Load catalogue from JSON file."""
+        with open(self.catalogue_path, "r") as f:
+            data = json.load(f)
+            self.entries = [SessionAudio(**entry) for entry in data]
+
+    def _save(self) -> None:
+        """Save catalogue to JSON file."""
+        with open(self.catalogue_path, "w") as f:
+            data = [entry.model_dump(mode="json") for entry in self.entries]
+            json.dump(data, f, indent=2)
 
     def add_entry(self, entry: SessionAudio) -> None:
-        """Add a new entry to the catalogue."""
-        raise NotImplementedError
+        """Add a new entry to the catalogue.
+
+        Args:
+            entry: SessionAudio metadata entry to add
+        """
+        # Check if this is a duplicate by video_id
+        if self.is_duplicate(entry.video_id):
+            # Update existing entry instead of adding duplicate
+            for i, existing in enumerate(self.entries):
+                if existing.video_id == entry.video_id:
+                    self.entries[i] = entry
+                    break
+        else:
+            self.entries.append(entry)
+
+        self._save()
 
     def is_duplicate(self, video_id: str) -> bool:
-        """Check if a video ID already exists in the catalogue."""
-        raise NotImplementedError
+        """Check if a video ID already exists in the catalogue.
+
+        Args:
+            video_id: YouTube video ID to check
+
+        Returns:
+            True if the video ID exists in the catalogue, False otherwise
+        """
+        return any(entry.video_id == video_id for entry in self.entries)
 
     def get_all_entries(self) -> list[SessionAudio]:
-        """Return all catalogue entries."""
-        raise NotImplementedError
+        """Return all catalogue entries.
+
+        Returns:
+            List of all SessionAudio entries
+        """
+        return self.entries
