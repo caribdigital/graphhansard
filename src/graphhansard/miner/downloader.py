@@ -84,7 +84,9 @@ class SessionDownloader:
         try:
             with open(proxy_list_path, "r") as f:
                 self.proxies = [
-                    line.strip() for line in f if line.strip() and not line.startswith("#")
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
                 ]
             logger.info(f"Loaded {len(self.proxies)} proxies from {proxy_list_path}")
         except Exception as e:
@@ -99,7 +101,7 @@ class SessionDownloader:
         """
         if not self.proxies:
             return None
-        
+
         proxy = self.proxies[self.current_proxy_index]
         self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
         logger.info(f"Using proxy: {proxy}")
@@ -318,7 +320,7 @@ class SessionDownloader:
             Dictionary with download status and metadata
         """
         start_time = time.time()
-        
+
         if self.download_count >= self.max_downloads:
             logger.warning(
                 f"Max downloads ({self.max_downloads}) reached, "
@@ -380,7 +382,8 @@ class SessionDownloader:
                                 )
                         else:
                             logger.info(
-                                f"Keeping duplicate file (delete_duplicates=False): {filepath}"
+                                f"Keeping duplicate file "
+                                f"(delete_duplicates=False): {filepath}"
                             )
 
                         # Create entry but mark as duplicate

@@ -519,7 +519,7 @@ class TestDownloadLogger:
         """Test initializing the download logger."""
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "download_log.jsonl"
-            logger = DownloadLogger(str(log_path))
+            DownloadLogger(str(log_path))
 
             assert log_path.exists()
 

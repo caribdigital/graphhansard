@@ -25,10 +25,10 @@ class DownloadLogger:
             log_path: Path to the JSONL log file
         """
         self.log_path = Path(log_path)
-        
+
         # Create parent directory if it doesn't exist
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Create file if it doesn't exist
         if not self.log_path.exists():
             self.log_path.touch()
@@ -57,11 +57,11 @@ class DownloadLogger:
             "reason": reason,
             "duration": duration,
         }
-        
+
         # Add metadata if provided
         if metadata:
             entry.update(metadata)
-        
+
         # Append to log file
         try:
             with open(self.log_path, "a") as f:

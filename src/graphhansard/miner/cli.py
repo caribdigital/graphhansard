@@ -134,6 +134,7 @@ def handle_add_manual(args: argparse.Namespace) -> int:
     """
     try:
         import hashlib
+
         from graphhansard.miner.download_logger import DownloadLogger
 
         file_path = Path(args.file)
