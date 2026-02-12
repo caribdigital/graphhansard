@@ -7,6 +7,8 @@ Implements the resolution cascade defined in SRD §6.4:
 
 Co-reference / anaphoric resolution (step 3 in SRD) is handled
 by the brain.entity_extractor module, not here.
+
+Includes Bahamian Creole normalization (BC-1, BC-2).
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from pathlib import Path
 from rapidfuzz import fuzz
 
 from .models import GoldenRecord
+from ..brain.creole_utils import normalize_bahamian_creole
 
 
 @dataclass
@@ -35,17 +38,25 @@ class AliasResolver:
     """Resolves raw mention strings to canonical MP node IDs.
 
     See SRD §6.4 for the full resolution cascade specification.
+    Includes Bahamian Creole normalization (BC-1, BC-2).
     """
 
-    def __init__(self, golden_record_path: str, fuzzy_threshold: int = 85):
+    def __init__(
+        self,
+        golden_record_path: str,
+        fuzzy_threshold: int = 85,
+        normalize_creole: bool = True,
+    ):
         """Initialize the AliasResolver.
 
         Args:
             golden_record_path: Path to mps.json
             fuzzy_threshold: Minimum score for fuzzy matches (0-100), default 85
+            normalize_creole: Whether to apply Bahamian Creole normalization (default: True)
         """
         self.golden_record_path = Path(golden_record_path)
         self.fuzzy_threshold = fuzzy_threshold
+        self.normalize_creole = normalize_creole
         self.unresolved_log: list[dict] = []
 
         # Load the golden record
@@ -67,6 +78,10 @@ class AliasResolver:
         Returns:
             ResolutionResult with node_id, confidence, and method.
         """
+        # Apply Bahamian Creole normalization if enabled (BC-1, BC-2)
+        if self.normalize_creole:
+            mention = normalize_bahamian_creole(mention)
+        
         # Normalize the mention
         normalized = self._normalize(mention)
 
