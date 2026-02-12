@@ -86,7 +86,6 @@ class TranscriptionPipeline:
         )
 
         # Step 2: Perform diarization if enabled
-        transcript = None
         if enable_diarization and self.diarizer:
             if self.use_whisperx:
                 # Use WhisperX for advanced alignment

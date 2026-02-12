@@ -135,7 +135,8 @@ class AudioQualityAnalyzer:
         if frame_std < 0.01 * signal_rms:  # Very low variation
             # Use a small fraction of signal as effective noise floor
             # This represents that the signal is very consistent (high quality)
-            noise_rms = max(0.001 * signal_rms, 1e-10)  # 60dB SNR baseline
+            # 0.001 * signal_rms gives SNR = 20*log10(1/0.001) = 60dB
+            noise_rms = max(0.001 * signal_rms, 1e-10)
 
         if noise_rms == 0 or signal_rms == 0:
             return 0.0
