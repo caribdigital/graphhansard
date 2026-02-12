@@ -116,12 +116,13 @@ def example_unresolved_mentions():
     print("="*70)
     
     extractor = EntityExtractor(str(GOLDEN_RECORD_PATH), use_spacy=False)
+    extractor.clear_unresolved_log()  # Start fresh
     
     transcript = {
         "session_id": "2023-11-15-session",
         "segments": [
             {
-                "text": "The Speaker recognized the Member for Nassau and the unknown representative.",
+                "text": "The Member for Unknown Constituency and the Prime Minister spoke.",
                 "speaker_node_id": "mp_thompson_iram",
                 "start_time": 0.0,
                 "end_time": 5.0,
@@ -142,7 +143,27 @@ def example_unresolved_mentions():
     # Show unresolved count
     unresolved = [m for m in mentions if not m.target_node_id]
     print(f"\nTotal unresolved: {len(unresolved)}")
-    print("(These would be logged for human review in production)")
+    print(f"Logged for review: {extractor.get_unresolved_count()}")
+    print("(These are automatically logged for human review)")
+    
+    # Demonstrate saving the log using mkstemp for explicit file management
+    import tempfile
+    import os
+    
+    fd, temp_path = tempfile.mkstemp(suffix='.json', text=True)
+    os.close(fd)  # Close the file descriptor, we'll write using the path
+    
+    extractor.save_unresolved_log(temp_path)
+    print(f"\nUnresolved log saved to: {temp_path}")
+    
+    # Show log contents
+    with open(temp_path, 'r') as f:
+        log_data = json.load(f)
+    
+    print(f"Log contains {log_data['total_unresolved']} unresolved mention(s)")
+    
+    # Clean up
+    os.unlink(temp_path)
 
 
 def example_with_spacy():

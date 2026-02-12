@@ -219,9 +219,9 @@ class TestMentionExtraction:
         assert "Prime Minister" in mention.raw_mention
 
     def test_extract_resolves_to_golden_record(self, extractor):
-        """Mentions are resolved to canonical MP node IDs."""
+        """Mentions are resolved to canonical MP node IDs via Golden Record."""
         segment = {
-            "text": "Brave Davis announced new policies.",
+            "text": "The Prime Minister made an announcement.",
             "speaker_node_id": "mp_thompson_iram",
             "start_time": 10.0,
             "end_time": 15.0,
@@ -232,12 +232,16 @@ class TestMentionExtraction:
             segment, 0, "test_session", segments, debate_date=None
         )
         
-        # Should resolve "Brave Davis" to mp_davis_brave
-        if len(mentions) > 0:
-            # At least one mention should resolve correctly
-            resolved = [m for m in mentions if m.target_node_id == "mp_davis_brave"]
-            # Pattern matching might not catch "Brave Davis" but resolver should work
-            # This is more of an integration test
+        # Should find "The Prime Minister" and resolve it
+        assert len(mentions) > 0
+        pm_mentions = [m for m in mentions if "Prime Minister" in m.raw_mention]
+        assert len(pm_mentions) > 0
+        
+        # Should resolve to Brave Davis (current PM)
+        assert pm_mentions[0].target_node_id == "mp_davis_brave"
+        assert pm_mentions[0].resolution_method in (
+            ResolutionMethod.EXACT, ResolutionMethod.FUZZY
+        )
 
     def test_extract_skips_empty_segments(self, extractor):
         """Skips segments with no text or no speaker."""
@@ -399,3 +403,113 @@ class TestSentenceSplitting:
         
         assert len(sentences) == 1
         assert sentences[0] == text
+
+
+class TestUnresolvedLogging:
+    """Test unresolved mention logging (BR-12)."""
+
+    def test_unresolved_mentions_are_logged(self, extractor):
+        """Unresolved mentions are logged for human review."""
+        segment = {
+            "text": "The unknown person spoke today.",
+            "speaker_node_id": "mp_thompson_iram",
+            "start_time": 0.0,
+            "end_time": 5.0,
+        }
+        
+        # Clear any existing log
+        extractor.clear_unresolved_log()
+        
+        mentions = extractor._extract_from_segment(
+            segment, 0, "test_session", [segment], None
+        )
+        
+        # No pattern matches expected for "unknown person"
+        # So unresolved count should be 0 (nothing detected to resolve)
+        initial_count = extractor.get_unresolved_count()
+        assert initial_count == 0
+
+    def test_unresolved_count_tracked(self, extractor):
+        """Unresolved mention count is tracked."""
+        extractor.clear_unresolved_log()
+        
+        transcript = {
+            "session_id": "test_session",
+            "segments": [
+                {
+                    "text": "The Member for Unknown Place spoke.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                },
+            ],
+        }
+        
+        mentions = extractor.extract_mentions(transcript)
+        
+        # "Member for Unknown Place" should be detected but unresolved
+        unresolved = [m for m in mentions if m.target_node_id is None]
+        assert len(unresolved) > 0
+        assert extractor.get_unresolved_count() == len(unresolved)
+
+    def test_save_unresolved_log(self, extractor, tmp_path):
+        """Unresolved log can be saved to file."""
+        import json
+        
+        extractor.clear_unresolved_log()
+        
+        transcript = {
+            "session_id": "test_session",
+            "segments": [
+                {
+                    "text": "The Member for Atlantis spoke.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                },
+            ],
+        }
+        
+        mentions = extractor.extract_mentions(transcript)
+        
+        # Save log
+        log_path = tmp_path / "unresolved.json"
+        extractor.save_unresolved_log(str(log_path))
+        
+        # Verify file exists and is valid JSON
+        assert log_path.exists()
+        
+        with open(log_path) as f:
+            log_data = json.load(f)
+        
+        assert "total_unresolved" in log_data
+        assert "mentions" in log_data
+        assert isinstance(log_data["mentions"], list)
+
+    def test_clear_unresolved_log(self, extractor):
+        """Unresolved log can be cleared."""
+        extractor.clear_unresolved_log()
+        assert extractor.get_unresolved_count() == 0
+        
+        # Add some unresolved
+        transcript = {
+            "session_id": "test_session",
+            "segments": [
+                {
+                    "text": "The Member for Narnia spoke.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                },
+            ],
+        }
+        
+        extractor.extract_mentions(transcript)
+        
+        # Should have some unresolved now
+        initial_count = extractor.get_unresolved_count()
+        assert initial_count > 0
+        
+        # Clear and verify
+        extractor.clear_unresolved_log()
+        assert extractor.get_unresolved_count() == 0

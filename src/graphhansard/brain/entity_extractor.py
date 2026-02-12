@@ -81,6 +81,13 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
     }
+    
+    # Stop words that typically follow mentions (not part of the title)
+    STOP_WORDS = [
+        'said', 'spoke', 'mentioned', 'stated', 'asked', 'replied',
+        'announced', 'presented', 'addressed', 'raised', 'discussed',
+        'opened', 'responded', 'and', 'or', 'but', 'thanked'
+    ]
 
     def __init__(self, golden_record_path: str, use_spacy: bool = False):
         """Initialize the EntityExtractor.
@@ -93,6 +100,7 @@ class EntityExtractor:
         self.resolver = AliasResolver(str(golden_record_path))
         self.use_spacy = use_spacy
         self.nlp = None
+        self.unresolved_mentions = []  # Track unresolved mentions
 
         # Initialize spaCy if requested
         if use_spacy:
@@ -113,7 +121,9 @@ class EntityExtractor:
 
                 # Add custom entity ruler for parliamentary titles
                 if "entity_ruler" not in self.nlp.pipe_names:
-                    ruler = self.nlp.add_pipe("entity_ruler", before="ner" if self.nlp.has_pipe("ner") else "sentencizer")
+                    # Insert entity ruler before NER if NER exists, otherwise before sentencizer
+                    insert_before = "ner" if self.nlp.has_pipe("ner") else "sentencizer"
+                    ruler = self.nlp.add_pipe("entity_ruler", before=insert_before)
                     self._add_parliamentary_patterns(ruler)
 
             except ImportError:
@@ -232,6 +242,12 @@ class EntityExtractor:
             )
             
             mentions.append(mention_record)
+            
+            # Log unresolved mentions for human review (BR-12)
+            if resolution.node_id is None:
+                self._log_unresolved_mention(
+                    raw_mention, session_id, segment_index, debate_date, context
+                )
         
         return mentions
 
@@ -242,13 +258,6 @@ class EntityExtractor:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
-        
-        # Common words that typically follow mentions (not part of the title)
-        stop_words = [
-            'said', 'spoke', 'mentioned', 'stated', 'asked', 'replied',
-            'announced', 'presented', 'addressed', 'raised', 'discussed',
-            'opened', 'responded', 'and', 'or', 'but'
-        ]
         
         for pattern_name, pattern in self.PATTERNS.items():
             for match in pattern.finditer(text):
@@ -261,7 +270,7 @@ class EntityExtractor:
                 cleaned_words = []
                 for word in words:
                     word_lower = word.lower().strip('.,!?;:')
-                    if word_lower in stop_words:
+                    if word_lower in self.STOP_WORDS:
                         break
                     cleaned_words.append(word)
                 
@@ -420,3 +429,55 @@ class EntityExtractor:
         # TODO: Implement coreference resolution in future version
         # For now, return None (will be logged as unresolved)
         return None
+
+    def _log_unresolved_mention(
+        self, mention: str, session_id: str, segment_index: int,
+        debate_date: str | None, context: str
+    ) -> None:
+        """Log an unresolved mention for human review.
+
+        Args:
+            mention: The raw mention that could not be resolved
+            session_id: Session identifier
+            segment_index: Segment number where mention occurred
+            debate_date: Optional debate date
+            context: Context window around the mention
+        """
+        from datetime import datetime, timezone
+        
+        self.unresolved_mentions.append({
+            "mention": mention,
+            "session_id": session_id,
+            "segment_index": segment_index,
+            "debate_date": debate_date,
+            "context": context,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def save_unresolved_log(self, output_path: str) -> None:
+        """Save the unresolved mentions log to a JSON file.
+
+        Args:
+            output_path: Path to save the log file
+        """
+        import json
+        
+        output = {
+            "total_unresolved": len(self.unresolved_mentions),
+            "mentions": self.unresolved_mentions,
+        }
+        
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, indent=2, ensure_ascii=False)
+
+    def get_unresolved_count(self) -> int:
+        """Get the count of unresolved mentions logged so far.
+
+        Returns:
+            Number of unresolved mentions
+        """
+        return len(self.unresolved_mentions)
+
+    def clear_unresolved_log(self) -> None:
+        """Clear the unresolved mentions log."""
+        self.unresolved_mentions = []
