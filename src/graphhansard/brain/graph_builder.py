@@ -18,6 +18,25 @@ class StructuralRole(str, Enum):
     ISOLATED = "isolated"
 
 
+class EdgeSemanticType(str, Enum):
+    """Edge semantic categories per BC-4 and GR-7.
+    
+    Speaker-related edge semantics (procedural, excluded from political graph by default):
+    - RECOGNIZING: Speaker recognizes an MP to speak
+    - ADMONISHING: Speaker warns or rebukes an MP
+    - CUTTING_OFF: Speaker interrupts or cuts off an MP
+    - RULING: Speaker makes a ruling on a point of order
+    
+    Standard political interaction (included in political graph):
+    - MENTION: Standard reference between MPs
+    """
+    RECOGNIZING = "recognizing"
+    ADMONISHING = "admonishing"
+    CUTTING_OFF = "cutting_off"
+    RULING = "ruling"
+    MENTION = "mention"
+
+
 class NodeMetrics(BaseModel):
     """Centrality metrics and structural role for a single MP node."""
 
@@ -34,7 +53,11 @@ class NodeMetrics(BaseModel):
 
 
 class EdgeRecord(BaseModel):
-    """Aggregated mention interaction between two MPs."""
+    """Aggregated mention interaction between two MPs.
+    
+    Per GR-7: Edges involving the Speaker (node_type: control) are tagged 
+    as procedural and excluded from the political interaction graph by default.
+    """
 
     source_node_id: str
     target_node_id: str
@@ -45,10 +68,21 @@ class EdgeRecord(BaseModel):
     net_sentiment: float = Field(
         default=0.0, description="(positive - negative) / total"
     )
+    semantic_type: EdgeSemanticType = Field(
+        default=EdgeSemanticType.MENTION,
+        description="Edge semantic category per BC-4"
+    )
+    is_procedural: bool = Field(
+        default=False,
+        description="True if edge involves Speaker control node (GR-7); excluded from political graph by default"
+    )
 
 
 class SessionGraph(BaseModel):
-    """Complete graph data for a single parliamentary session."""
+    """Complete graph data for a single parliamentary session.
+    
+    Per GR-7: Use political_edges() to get edges with Speaker interactions excluded.
+    """
 
     session_id: str
     date: str
@@ -57,6 +91,21 @@ class SessionGraph(BaseModel):
     edge_count: int = 0
     nodes: list[NodeMetrics] = Field(default_factory=list)
     edges: list[EdgeRecord] = Field(default_factory=list)
+
+    def political_edges(self) -> list[EdgeRecord]:
+        """Return only non-procedural edges (Speaker interactions excluded).
+        
+        Per GR-7: References to/from the Speaker are tagged as procedural 
+        and excluded from the political graph by default.
+        """
+        return [edge for edge in self.edges if not edge.is_procedural]
+
+    def procedural_edges(self) -> list[EdgeRecord]:
+        """Return only procedural edges (Speaker interactions).
+        
+        Per GR-7: For dashboard toggle or analysis of parliamentary procedure.
+        """
+        return [edge for edge in self.edges if edge.is_procedural]
 
 
 class GraphBuilder:
