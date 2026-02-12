@@ -59,6 +59,9 @@ Homepage = "https://github.com/caribdigital/graphhansard"
 Repository = "https://github.com/caribdigital/graphhansard"
 Issues = "https://github.com/caribdigital/graphhansard/issues"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/graphhansard"]
 
