@@ -72,7 +72,7 @@ class EdgeRecord(BaseModel):
     )
     semantic_type: EdgeSemanticType = Field(
         default=EdgeSemanticType.MENTION,
-        description="Edge semantic category per BC-4"
+        description="Edge semantic category per BC-4 and GR-7"
     )
     is_procedural: bool = Field(
         default=False,
