@@ -1,5 +1,6 @@
 """Tests for Golden Record community contributions (GR-9)."""
 
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -105,7 +106,7 @@ class TestAliasSubmission:
         assert submission.submitted_at is None
         submission.set_submitted_at()
         assert submission.submitted_at is not None
-        assert "T" in submission.submitted_at  # ISO format
+        assert isinstance(submission.submitted_at, datetime)
 
     def test_approve_changes_status(self):
         """approve() changes status to APPROVED."""

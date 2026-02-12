@@ -54,7 +54,7 @@ class AliasSubmission(BaseModel):
     )
     target_node_id: str = Field(
         description="The node_id this alias refers to (e.g., 'mp_davis_brave')",
-        pattern=r"^mp_[a-z_]+$",
+        pattern=r"^(mp|speaker)_[a-z_]+$",
     )
     source_evidence: str = Field(
         description=(
@@ -78,8 +78,8 @@ class AliasSubmission(BaseModel):
     submission_id: str | None = Field(
         default=None, description="Unique ID (auto-generated)"
     )
-    submitted_at: str | None = Field(
-        default=None, description="ISO timestamp (auto-generated)"
+    submitted_at: datetime | None = Field(
+        default=None, description="Submission timestamp (auto-generated)"
     )
     status: ContributionStatus = Field(
         default=ContributionStatus.PENDING, description="Review status"
@@ -118,7 +118,7 @@ class AliasSubmission(BaseModel):
     def set_submitted_at(self) -> None:
         """Set the submission timestamp."""
         if not self.submitted_at:
-            self.submitted_at = datetime.now(timezone.utc).isoformat()
+            self.submitted_at = datetime.now(timezone.utc)
 
     def approve(self, reviewer_notes: str | None = None) -> None:
         """Mark this submission as approved.

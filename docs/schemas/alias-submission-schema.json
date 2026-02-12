@@ -25,7 +25,7 @@
     },
     "target_node_id": {
       "type": "string",
-      "pattern": "^mp_[a-z_]+$",
+      "pattern": "^(mp|speaker)_[a-z_]+$",
       "description": "The node_id this alias refers to",
       "examples": ["mp_davis_brave", "mp_cooper_chester"]
     },

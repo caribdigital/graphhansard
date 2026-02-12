@@ -44,9 +44,8 @@ class GoldenRecordExporter:
             output_path: Path to save the JSON file
             include_metadata_header: If True, includes export metadata at top level
         """
-        # Load raw JSON to preserve original structure
-        with open(self.golden_record_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        # Use validated model data for consistency
+        data = json.loads(self.golden_record.model_dump_json())
 
         if include_metadata_header:
             export_data = {
