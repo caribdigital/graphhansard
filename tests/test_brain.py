@@ -34,7 +34,9 @@ class TestWordToken:
 
     def test_word_token_validation(self):
         """Test WordToken validates required fields."""
-        with pytest.raises(Exception):  # Pydantic validation error
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError):
             WordToken(word="hello")  # Missing required fields
 
 
@@ -355,6 +357,50 @@ class TestPipelineIO:
         assert loaded.session_id == transcript.session_id
         assert len(loaded.segments) == len(transcript.segments)
         assert loaded.segments[0].text == transcript.segments[0].text
+
+    @patch.object(TranscriptionPipeline, "process")
+    def test_batch_processing(self, mock_process, tmp_path):
+        """Test batch processing creates correct output files."""
+        # Setup mock to return a transcript
+        mock_transcript = DiarizedTranscript(
+            session_id="test_session",
+            segments=[
+                TranscriptSegment(
+                    speaker_label="SPEAKER_00",
+                    start_time=0.0,
+                    end_time=5.0,
+                    text="Test",
+                    confidence=0.9,
+                )
+            ],
+        )
+        mock_process.return_value = mock_transcript
+
+        # Create pipeline and process batch
+        pipeline = TranscriptionPipeline()
+        audio_files = [
+            ("audio1.wav", "session_001"),
+            ("audio2.wav", "session_002"),
+        ]
+        output_dir = tmp_path / "transcripts"
+
+        output_files = pipeline.process_batch(
+            audio_files=audio_files,
+            output_dir=str(output_dir),
+            enable_diarization=False,
+        )
+
+        # Verify output
+        assert len(output_files) == 2
+        assert all(f.exists() for f in output_files)
+        assert output_files[0].name == "session_001_transcript.json"
+        assert output_files[1].name == "session_002_transcript.json"
+
+        # Verify each file contains valid transcript
+        for output_file in output_files:
+            loaded = pipeline.load_transcript(str(output_file))
+            assert isinstance(loaded, DiarizedTranscript)
+            assert len(loaded.segments) > 0
 
 
 class TestEdgeCases:

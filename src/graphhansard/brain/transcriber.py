@@ -67,6 +67,24 @@ class Transcriber:
         self.backend = backend
         self._model = None
 
+    def _normalize_confidence(self, log_prob: float) -> float:
+        """Convert log probability to confidence score in [0, 1] range.
+        
+        Whisper's avg_logprob is typically in range [-inf, 0], where:
+        - 0.0 = perfect confidence (prob=1.0)
+        - -1.0 = ~0.37 confidence (prob=exp(-1))
+        - -2.0 = ~0.14 confidence (prob=exp(-2))
+        
+        We use exp(log_prob) bounded to [0, 1].
+        """
+        import math
+        try:
+            confidence = math.exp(log_prob)
+            return max(0.0, min(1.0, confidence))
+        except (ValueError, OverflowError):
+            # Handle edge cases (very negative log_prob)
+            return 0.0
+
     def _load_model(self):
         """Lazy-load the transcription model."""
         if self._model is not None:
@@ -137,7 +155,7 @@ class Transcriber:
                     "start": segment.start,
                     "end": segment.end,
                     "text": segment.text,
-                    "confidence": segment.avg_logprob,  # Use avg_logprob as confidence proxy
+                    "confidence": self._normalize_confidence(segment.avg_logprob),  # Transform log prob to [0,1]
                     "words": [],
                 }
 
