@@ -136,7 +136,7 @@ class TestSpeakerControlNode:
 
         cutting_off = EdgeRecord(
             source_node_id="mp_deveaux_patricia",
-            target_node_id="mp_wilchcombe_ivan",
+            target_node_id="mp_thompson_kwasi",
             total_mentions=1,
             is_procedural=True,
             semantic_type=EdgeSemanticType.CUTTING_OFF,
@@ -145,12 +145,63 @@ class TestSpeakerControlNode:
 
         ruling = EdgeRecord(
             source_node_id="mp_deveaux_patricia",
-            target_node_id="mp_symonette_michael",
+            target_node_id="mp_cartwright_shanendon",
             total_mentions=1,
             is_procedural=True,
             semantic_type=EdgeSemanticType.RULING,
         )
         assert ruling.semantic_type == EdgeSemanticType.RULING
+
+
+    def test_political_edges_empty_when_all_procedural(self):
+        """GR-7: political_edges() returns empty list when all edges are procedural."""
+        edges = [
+            EdgeRecord(
+                source_node_id="mp_deveaux_patricia",
+                target_node_id="mp_davis_brave",
+                total_mentions=1,
+                is_procedural=True,
+                semantic_type=EdgeSemanticType.RECOGNIZING,
+            ),
+            EdgeRecord(
+                source_node_id="mp_deveaux_patricia",
+                target_node_id="mp_pintard_michael",
+                total_mentions=1,
+                is_procedural=True,
+                semantic_type=EdgeSemanticType.ADMONISHING,
+            ),
+        ]
+        graph = SessionGraph(
+            session_id="all_procedural",
+            date="2024-01-15",
+            graph_file="test.graphml",
+            edges=edges,
+        )
+        assert graph.political_edges() == []
+        assert len(graph.procedural_edges()) == 2
+
+    def test_procedural_edges_empty_when_none_procedural(self):
+        """GR-7: procedural_edges() returns empty list when no edges are procedural."""
+        edges = [
+            EdgeRecord(
+                source_node_id="mp_davis_brave",
+                target_node_id="mp_cooper_chester",
+                total_mentions=5,
+            ),
+            EdgeRecord(
+                source_node_id="mp_mitchell_fred",
+                target_node_id="mp_pintard_michael",
+                total_mentions=3,
+            ),
+        ]
+        graph = SessionGraph(
+            session_id="no_procedural",
+            date="2024-01-15",
+            graph_file="test.graphml",
+            edges=edges,
+        )
+        assert graph.procedural_edges() == []
+        assert len(graph.political_edges()) == 2
 
 
 class TestTemporalVersioning:
