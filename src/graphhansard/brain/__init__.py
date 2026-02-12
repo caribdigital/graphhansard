@@ -6,8 +6,15 @@ networks through four sequential stages:
 2. Entity Extraction & Co-reference Resolution
 3. Sentiment Scoring
 4. Graph Construction & Metric Computation
+
+Includes Bahamian Creole normalization utilities (BC-1, BC-2, BC-3).
 """
 
+from graphhansard.brain.creole_utils import (
+    normalize_bahamian_creole,
+    normalize_th_stopping,
+    normalize_vowel_shifts,
+)
 from graphhansard.brain.diarizer import Diarizer
 from graphhansard.brain.pipeline import TranscriptionPipeline, create_pipeline
 from graphhansard.brain.transcriber import (
@@ -25,4 +32,7 @@ __all__ = [
     "DiarizedTranscript",
     "TranscriptSegment",
     "WordToken",
+    "normalize_bahamian_creole",
+    "normalize_th_stopping",
+    "normalize_vowel_shifts",
 ]
