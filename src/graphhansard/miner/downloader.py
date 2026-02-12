@@ -17,6 +17,7 @@ from typing import Any
 import yt_dlp
 
 from graphhansard.miner.catalogue import AudioCatalogue, DownloadStatus, SessionAudio
+from graphhansard.miner.download_logger import DownloadLogger
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class SessionDownloader:
         sleep_interval: int = 5,
         max_downloads: int = 50,
         delete_duplicates: bool = True,
+        proxy_list_path: str | None = None,
     ):
         """Initialize the SessionDownloader.
 
@@ -43,6 +45,7 @@ class SessionDownloader:
             sleep_interval: Seconds to wait between downloads (rate limiting)
             max_downloads: Maximum number of downloads per session
             delete_duplicates: Whether to delete files detected as hash duplicates
+            proxy_list_path: Optional path to file containing proxy URLs (one per line)
         """
         self.archive_dir = Path(archive_dir)
         self.cookies_path = cookies_path
@@ -50,6 +53,13 @@ class SessionDownloader:
         self.max_downloads = max_downloads
         self.delete_duplicates = delete_duplicates
         self.download_count = 0
+        self.proxy_list_path = proxy_list_path
+        self.proxies: list[str] = []
+        self.current_proxy_index = 0
+
+        # Load proxy list if provided
+        if proxy_list_path:
+            self._load_proxy_list(proxy_list_path)
 
         # Create archive directory if it doesn't exist
         self.archive_dir.mkdir(parents=True, exist_ok=True)
@@ -60,6 +70,40 @@ class SessionDownloader:
 
         # Download archive file for yt-dlp resumability
         self.download_archive_path = self.archive_dir / "download_archive.txt"
+
+        # Initialize download logger
+        download_log_path = self.archive_dir / "download_log.jsonl"
+        self.download_logger = DownloadLogger(str(download_log_path))
+
+    def _load_proxy_list(self, proxy_list_path: str) -> None:
+        """Load proxy list from a file.
+
+        Args:
+            proxy_list_path: Path to file containing proxy URLs (one per line)
+        """
+        try:
+            with open(proxy_list_path, "r") as f:
+                self.proxies = [
+                    line.strip() for line in f if line.strip() and not line.startswith("#")
+                ]
+            logger.info(f"Loaded {len(self.proxies)} proxies from {proxy_list_path}")
+        except Exception as e:
+            logger.error(f"Failed to load proxy list from {proxy_list_path}: {e}")
+            self.proxies = []
+
+    def _get_next_proxy(self) -> str | None:
+        """Get the next proxy from the rotation.
+
+        Returns:
+            Next proxy URL or None if no proxies available
+        """
+        if not self.proxies:
+            return None
+        
+        proxy = self.proxies[self.current_proxy_index]
+        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
+        logger.info(f"Using proxy: {proxy}")
+        return proxy
 
     def _get_ydl_opts(self, output_template: str | None = None) -> dict[str, Any]:
         """Get yt-dlp options.
@@ -97,6 +141,11 @@ class SessionDownloader:
         # Add cookies if provided
         if self.cookies_path:
             opts["cookiefile"] = self.cookies_path
+
+        # Add proxy if available
+        proxy = self._get_next_proxy()
+        if proxy:
+            opts["proxy"] = proxy
 
         return opts
 
@@ -268,11 +317,17 @@ class SessionDownloader:
         Returns:
             Dictionary with download status and metadata
         """
+        start_time = time.time()
+        
         if self.download_count >= self.max_downloads:
             logger.warning(
                 f"Max downloads ({self.max_downloads}) reached, "
                 f"skipping {video_url}"
             )
+            # Extract video ID for logging
+            match = re.search(r'[?&]v=([^&]+)', video_url)
+            video_id = match.group(1) if match else "unknown"
+            self.download_logger.log_download_skipped(video_id, "max_reached")
             return {
                 "status": "skipped_max_reached",
                 "url": video_url,
@@ -300,6 +355,7 @@ class SessionDownloader:
                     )
 
                 filepath = Path(filepath)
+                video_id = info.get("id", "unknown")
 
                 # Calculate file hash if file exists
                 file_hash = ""
@@ -338,10 +394,14 @@ class SessionDownloader:
                         )
                         self.catalogue.add_entry(entry)
 
+                        # Log the skip
+                        duration = time.time() - start_time
+                        self.download_logger.log_download_skipped(video_id, "duplicate")
+
                         return {
                             "status": "skipped_duplicate",
                             "url": video_url,
-                            "video_id": info.get("id"),
+                            "video_id": video_id,
                             "reason": "hash_match",
                         }
 
@@ -359,6 +419,14 @@ class SessionDownloader:
 
                 self.download_count += 1
 
+                # Log successful download
+                duration = time.time() - start_time
+                self.download_logger.log_download_success(
+                    video_id=video_id,
+                    duration=duration,
+                    file_path=str(filepath),
+                )
+
                 # Rate limiting
                 if self.download_count < self.max_downloads:
                     logger.info(
@@ -370,7 +438,7 @@ class SessionDownloader:
                 return {
                     "status": "success",
                     "url": video_url,
-                    "video_id": info.get("id"),
+                    "video_id": video_id,
                     "filepath": str(filepath),
                 }
 
@@ -380,6 +448,15 @@ class SessionDownloader:
             # Extract video ID from URL without network call
             match = re.search(r'[?&]v=([^&]+)', video_url)
             video_id = match.group(1) if match else None
+
+            # Log the failure
+            duration = time.time() - start_time
+            if video_id:
+                self.download_logger.log_download_failed(
+                    video_id=video_id,
+                    duration=duration,
+                    error=str(e),
+                )
 
             # Record failure in catalogue
             if video_id:

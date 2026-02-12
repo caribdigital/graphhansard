@@ -41,6 +41,7 @@ def handle_scrape(args: argparse.Namespace) -> int:
         cookies_path=args.cookies,
         sleep_interval=5,
         max_downloads=50,
+        proxy_list_path=args.proxy_list if hasattr(args, 'proxy_list') else None,
     )
 
     try:
@@ -133,6 +134,7 @@ def handle_add_manual(args: argparse.Namespace) -> int:
     """
     try:
         import hashlib
+        from graphhansard.miner.download_logger import DownloadLogger
 
         file_path = Path(args.file)
 
@@ -176,6 +178,14 @@ def handle_add_manual(args: argparse.Namespace) -> int:
         # Add to catalogue
         catalogue = AudioCatalogue("archive/catalogue.json")
         catalogue.add_entry(entry)
+
+        # Log the manual addition
+        download_logger = DownloadLogger("archive/download_log.jsonl")
+        download_logger.log_manual_addition(
+            video_id=video_id,
+            file_path=str(file_path),
+            title=args.title,
+        )
 
         logger.info(f"Successfully added manual entry: {args.title}")
         print(f"Added: {args.title} ({video_id})")
