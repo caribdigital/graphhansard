@@ -202,6 +202,7 @@ class TestAudioCatalogue:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
 
+            fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
             entry = SessionAudio(
                 video_id="hash_test_123",
                 title="Hash Test Session",
@@ -211,7 +212,7 @@ class TestAudioCatalogue:
                 audio_bitrate_kbps=128,
                 file_path="test.opus",
                 file_hash_sha256="abc123def456",
-                download_timestamp=datetime.now(timezone.utc),
+                download_timestamp=fixed_time,
                 source_url="https://youtube.com/watch?v=hash_test_123",
                 status=DownloadStatus.DOWNLOADED,
             )
@@ -227,6 +228,7 @@ class TestAudioCatalogue:
             catalogue_path = Path(tmpdir) / "catalogue.json"
             catalogue = AudioCatalogue(str(catalogue_path))
 
+            fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
             # Add a failed entry with a hash
             failed_entry = SessionAudio(
                 video_id="failed_123",
@@ -237,7 +239,7 @@ class TestAudioCatalogue:
                 audio_bitrate_kbps=0,
                 file_path="",
                 file_hash_sha256="failed_hash_123",
-                download_timestamp=datetime.now(timezone.utc),
+                download_timestamp=fixed_time,
                 source_url="https://youtube.com/watch?v=failed_123",
                 status=DownloadStatus.FAILED,
             )
@@ -256,7 +258,7 @@ class TestAudioCatalogue:
                 audio_bitrate_kbps=128,
                 file_path="test.opus",
                 file_hash_sha256="failed_hash_123",
-                download_timestamp=datetime.now(timezone.utc),
+                download_timestamp=fixed_time,
                 source_url="https://youtube.com/watch?v=success_123",
                 status=DownloadStatus.DOWNLOADED,
             )

@@ -267,6 +267,16 @@ class SessionDownloader:
                             f"File hash {file_hash[:12]}... already exists in "
                             f"catalogue, marking as duplicate"
                         )
+
+                        # Delete the duplicate file to save storage space
+                        try:
+                            filepath.unlink()
+                            logger.info(f"Deleted duplicate file: {filepath}")
+                        except Exception as e:
+                            logger.warning(
+                                f"Could not delete duplicate file {filepath}: {e}"
+                            )
+
                         # Create entry but mark as duplicate
                         entry = self._create_session_audio_entry(
                             info=info,
