@@ -41,6 +41,7 @@ def handle_scrape(args: argparse.Namespace) -> int:
         cookies_path=args.cookies,
         sleep_interval=5,
         max_downloads=50,
+        proxy_list_path=args.proxy_list,
     )
 
     try:
@@ -134,6 +135,8 @@ def handle_add_manual(args: argparse.Namespace) -> int:
     try:
         import hashlib
 
+        from graphhansard.miner.download_logger import DownloadLogger
+
         file_path = Path(args.file)
 
         if not file_path.exists():
@@ -147,9 +150,12 @@ def handle_add_manual(args: argparse.Namespace) -> int:
             logger.error(f"Invalid date format: {args.date}. Use YYYY-MM-DD.")
             return 1
 
-        # Calculate file hash
+        # Calculate file hash (chunked for large files)
+        h = hashlib.sha256()
         with open(file_path, "rb") as f:
-            file_hash = hashlib.sha256(f.read()).hexdigest()
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        file_hash = h.hexdigest()
 
         # Get file info
         file_ext = file_path.suffix.lstrip(".")
@@ -176,6 +182,14 @@ def handle_add_manual(args: argparse.Namespace) -> int:
         # Add to catalogue
         catalogue = AudioCatalogue("archive/catalogue.json")
         catalogue.add_entry(entry)
+
+        # Log the manual addition
+        download_logger = DownloadLogger("archive/download_log.jsonl")
+        download_logger.log_manual_addition(
+            video_id=video_id,
+            file_path=str(file_path),
+            title=args.title,
+        )
 
         logger.info(f"Successfully added manual entry: {args.title}")
         print(f"Added: {args.title} ({video_id})")
