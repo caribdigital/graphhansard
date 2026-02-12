@@ -5,16 +5,22 @@ against the manually annotated corpus.
 """
 
 import json
+import sys
 from pathlib import Path
 
-import pytest
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from graphhansard.golden_record.resolver import AliasResolver
+from validate_corpus import load_corpus, validate_corpus
+
+PROJECT_ROOT = Path(__file__).parent.parent
+CORPUS_PATH = PROJECT_ROOT / "golden_record" / "validation" / "annotated_mentions.json"
+GOLDEN_RECORD_PATH = PROJECT_ROOT / "golden_record" / "mps.json"
 
 
 def test_annotated_corpus_structure():
     """Verify the annotated corpus has the correct structure."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
+    corpus_path = CORPUS_PATH
     assert corpus_path.exists(), "Annotated corpus file does not exist"
 
     with open(corpus_path, encoding="utf-8") as f:
@@ -54,13 +60,10 @@ def test_annotated_corpus_structure():
 
 def test_annotated_corpus_node_ids_valid():
     """Verify all expected_node_ids in corpus exist in golden record."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
-    golden_record_path = Path("golden_record/mps.json")
-
-    with open(corpus_path, encoding="utf-8") as f:
+    with open(CORPUS_PATH, encoding="utf-8") as f:
         corpus = json.load(f)
 
-    with open(golden_record_path, encoding="utf-8") as f:
+    with open(GOLDEN_RECORD_PATH, encoding="utf-8") as f:
         golden_record = json.load(f)
 
     # Get all valid node_ids
@@ -76,83 +79,34 @@ def test_annotated_corpus_node_ids_valid():
 
 def test_validation_script_meets_target():
     """Verify validation meets the SRD §6.5 requirement (90%+ precision and recall)."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
-    golden_record_path = Path("golden_record/mps.json")
+    corpus = load_corpus(CORPUS_PATH)
+    resolver = AliasResolver(str(GOLDEN_RECORD_PATH))
 
-    # Load corpus
-    with open(corpus_path, encoding="utf-8") as f:
-        corpus = json.load(f)
-
-    # Initialize resolver
-    resolver = AliasResolver(str(golden_record_path))
-
-    # Run validation
-    total_mentions = len(corpus["mentions"])
-    correct_resolutions = 0
-    incorrect_resolutions = 0
-    unresolved_mentions = 0
-
-    for mention in corpus["mentions"]:
-        raw_mention = mention["raw_mention"]
-        expected_node_id = mention["expected_node_id"]
-        debate_date = mention.get("debate_date")
-
-        # Resolve the mention
-        result = resolver.resolve(raw_mention, debate_date)
-
-        # Determine if resolution was correct
-        is_correct = result.node_id == expected_node_id
-        was_resolved = result.node_id is not None
-
-        if is_correct:
-            correct_resolutions += 1
-        elif was_resolved:
-            incorrect_resolutions += 1
-        else:
-            unresolved_mentions += 1
-
-    # Calculate metrics
-    tp = correct_resolutions
-    fp = incorrect_resolutions
-    fn = unresolved_mentions
-
-    total_resolutions = tp + fp
-    precision = tp / total_resolutions if total_resolutions > 0 else 0.0
-
-    total_positives = tp + fn
-    recall = tp / total_positives if total_positives > 0 else 0.0
-
-    f1_score = (
-        2 * (precision * recall) / (precision + recall)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    metrics, _ = validate_corpus(resolver, corpus)
 
     # Assert meets target (90%+ on both)
     target = 0.90
     assert (
-        precision >= target
-    ), f"Precision {precision*100:.1f}% does not meet target {target*100:.0f}%"
+        metrics.precision >= target
+    ), f"Precision {metrics.precision*100:.1f}% does not meet target {target*100:.0f}%"
     assert (
-        recall >= target
-    ), f"Recall {recall*100:.1f}% does not meet target {target*100:.0f}%"
+        metrics.recall >= target
+    ), f"Recall {metrics.recall*100:.1f}% does not meet target {target*100:.0f}%"
 
     # Print results for documentation
     print(f"\nValidation Results:")
-    print(f"  Precision: {precision*100:.1f}%")
-    print(f"  Recall: {recall*100:.1f}%")
-    print(f"  F1 Score: {f1_score*100:.1f}%")
-    print(f"  Total Mentions: {total_mentions}")
-    print(f"  Correct: {correct_resolutions}")
-    print(f"  Incorrect: {incorrect_resolutions}")
-    print(f"  Unresolved: {unresolved_mentions}")
+    print(f"  Precision: {metrics.precision*100:.1f}%")
+    print(f"  Recall: {metrics.recall*100:.1f}%")
+    print(f"  F1 Score: {metrics.f1_score*100:.1f}%")
+    print(f"  Total Mentions: {metrics.total_mentions}")
+    print(f"  Correct: {metrics.correct_resolutions}")
+    print(f"  Incorrect: {metrics.incorrect_resolutions}")
+    print(f"  Unresolved: {metrics.unresolved_mentions}")
 
 
 def test_corpus_has_diverse_mention_types():
     """Verify the corpus includes diverse mention types."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
-
-    with open(corpus_path, encoding="utf-8") as f:
+    with open(CORPUS_PATH, encoding="utf-8") as f:
         corpus = json.load(f)
 
     # Count mention types
@@ -179,9 +133,7 @@ def test_corpus_has_diverse_mention_types():
 
 def test_corpus_includes_temporal_disambiguation():
     """Verify the corpus includes temporal disambiguation test cases."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
-
-    with open(corpus_path, encoding="utf-8") as f:
+    with open(CORPUS_PATH, encoding="utf-8") as f:
         corpus = json.load(f)
 
     # Look for mentions with same raw_mention but different expected results
@@ -212,9 +164,7 @@ def test_corpus_includes_temporal_disambiguation():
 
 def test_corpus_sources_documented():
     """Verify the corpus metadata includes source documentation."""
-    corpus_path = Path("golden_record/validation/annotated_mentions.json")
-
-    with open(corpus_path, encoding="utf-8") as f:
+    with open(CORPUS_PATH, encoding="utf-8") as f:
         corpus = json.load(f)
 
     sources = corpus["metadata"]["sources"]
