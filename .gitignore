@@ -37,6 +37,12 @@ golden_record/validation/audio/
 # Generated alias index (rebuilt at runtime by AliasResolver)
 golden_record/aliases_index.json
 
+# Community contribution queue (submissions not yet reviewed)
+contributions_queue.json
+
+# Export outputs (generated files)
+exports/
+
 # Model weights and caches (too large for git)
 models/
 *.pt
