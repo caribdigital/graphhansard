@@ -247,9 +247,8 @@ class TestVariantGeneration:
         """Text with 'member' generates 'memba' variant."""
         variants = get_th_stopped_variants("Member for Cat Island")
         # "Member" has a Creole variant "Memba"
-        assert len(variants) >= 1
         assert "Member for Cat Island" in variants
-        assert "Memba for Cat Island" in variants or len(variants) >= 2
+        assert "Memba for Cat Island" in variants
 
 
 class TestEdgeCases:

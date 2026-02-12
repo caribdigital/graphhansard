@@ -8,6 +8,8 @@ See SRD §11.1 (BC-1, BC-2, BC-3) for requirements.
 
 from __future__ import annotations
 
+import re
+
 
 # TH-stopping mappings: Bahamian Creole → Standard English (BC-1)
 TH_STOPPING_MAP = {
@@ -60,6 +62,8 @@ def normalize_th_stopping(text: str) -> str:
     normalized_words = []
     
     for word in words:
+        if not word:  # Skip empty strings
+            continue
         # Check if word (lowercased) is in TH-stopping map
         lower_word = word.lower()
         if lower_word in TH_STOPPING_MAP:
@@ -102,12 +106,11 @@ def normalize_vowel_shifts(text: str) -> str:
     for variant, standard in VOWEL_SHIFT_PATTERNS.items():
         # Match whole words or parts of constituency names
         # Use case-insensitive search and preserve original case
-        import re
         pattern = re.compile(re.escape(variant), re.IGNORECASE)
         
         def replace_preserving_case(match):
             matched_text = match.group(0)
-            if matched_text[0].isupper():
+            if matched_text and matched_text[0].isupper():
                 return standard.capitalize()
             return standard
         
@@ -173,6 +176,8 @@ def get_th_stopped_variants(text: str) -> list[str]:
     
     words = text.split()
     for i, word in enumerate(words):
+        if not word:  # Skip empty strings
+            continue
         lower_word = word.lower()
         if lower_word in reverse_map:
             variant_words = words.copy()
