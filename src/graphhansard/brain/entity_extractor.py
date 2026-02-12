@@ -69,15 +69,15 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
         "prime_minister": re.compile(
-            r"(?:The\s+)?Prime\s+Minister(?:\s+[A-Z][A-Za-z\s]+)?",
+            r"(?:The\s+)?Prime\s+Minister",
             re.IGNORECASE,
         ),
         "deputy_pm": re.compile(
-            r"(?:The\s+)?Deputy\s+Prime\s+Minister(?:\s+[A-Z][A-Za-z\s]+)?",
+            r"(?:The\s+)?Deputy\s+Prime\s+Minister",
             re.IGNORECASE,
         ),
         "attorney_general": re.compile(
-            r"(?:The\s+)?Attorney\s+General(?:\s+[A-Z][A-Za-z\s]+)?",
+            r"(?:The\s+)?Attorney\s+General",
             re.IGNORECASE,
         ),
     }
