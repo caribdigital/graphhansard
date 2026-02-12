@@ -190,8 +190,9 @@ class TestTranscriber:
 class TestDiarizer:
     """Test Diarizer class."""
 
-    def test_diarizer_requires_token(self):
+    def test_diarizer_requires_token(self, monkeypatch):
         """Test Diarizer requires HuggingFace token."""
+        monkeypatch.delenv("HF_TOKEN", raising=False)
         with pytest.raises(ValueError, match="HuggingFace token required"):
             Diarizer(hf_token=None)
 
@@ -249,7 +250,8 @@ class TestDiarizer:
 
         # Should assign to speaker with most overlap
         assert len(aligned) == 1
-        # The segment spans both speakers, should pick one with max overlap
+        # Equal overlap (1.0s each) — first speaker wins due to strict > comparison
+        assert aligned[0]["speaker"] == "SPEAKER_00"
 
 
 class TestTranscriptionPipeline:
@@ -436,3 +438,28 @@ class TestEdgeCases:
             confidence=1.0,  # Maximum
         )
         assert segment2.confidence == 1.0
+
+
+class TestConfidenceNormalization:
+    """Test confidence score normalization from log probabilities."""
+
+    def test_zero_log_prob_gives_perfect_confidence(self):
+        """exp(0) = 1.0 — perfect confidence."""
+        t = Transcriber(device="cpu")
+        assert t._normalize_confidence(0.0) == 1.0
+
+    def test_negative_log_prob_gives_partial_confidence(self):
+        """exp(-1) ≈ 0.368 — partial confidence."""
+        t = Transcriber(device="cpu")
+        conf = t._normalize_confidence(-1.0)
+        assert 0.3 < conf < 0.4
+
+    def test_very_negative_log_prob_gives_near_zero(self):
+        """exp(-100) ≈ 0.0 — effectively zero."""
+        t = Transcriber(device="cpu")
+        assert t._normalize_confidence(-100.0) < 1e-10
+
+    def test_positive_log_prob_clamped_to_one(self):
+        """Positive log_prob (invalid but possible) clamped to 1.0."""
+        t = Transcriber(device="cpu")
+        assert t._normalize_confidence(1.0) == 1.0
