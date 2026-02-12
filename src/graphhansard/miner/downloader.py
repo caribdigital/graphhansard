@@ -97,6 +97,69 @@ class SessionDownloader:
 
         return opts
 
+    def _create_session_audio_entry(
+        self,
+        info: dict,
+        filepath: Path,
+        file_hash: str,
+        video_url: str,
+        status: DownloadStatus,
+        notes: str | None = None,
+    ) -> SessionAudio:
+        """Create a SessionAudio entry from download info.
+
+        Args:
+            info: yt-dlp video info dictionary
+            filepath: Path to the downloaded file
+            file_hash: SHA-256 hash of the file
+            video_url: Original video URL
+            status: Download status
+            notes: Optional notes
+
+        Returns:
+            SessionAudio entry
+        """
+        # Parse upload date
+        upload_date_str = info.get("upload_date", "")
+        upload_date_obj = None
+        if upload_date_str:
+            try:
+                upload_date_obj = datetime.strptime(
+                    upload_date_str, "%Y%m%d"
+                ).date()
+            except ValueError:
+                pass
+
+        # Extract audio format info
+        audio_format = "opus"
+        audio_bitrate = 128
+
+        if "requested_downloads" in info and info["requested_downloads"]:
+            req_dl = info["requested_downloads"][0]
+            audio_format = req_dl.get("ext", "opus")
+            audio_bitrate = req_dl.get("abr", 128) or 128
+
+        upload_date_fallback = datetime.now(timezone.utc).date()
+        return SessionAudio(
+            video_id=info.get("id", ""),
+            title=info.get("title", ""),
+            parsed_date=None,  # To be parsed later
+            upload_date=upload_date_obj or upload_date_fallback,
+            duration_seconds=info.get("duration", 0) or 0,
+            audio_format=audio_format,
+            audio_bitrate_kbps=int(audio_bitrate),
+            file_path=(
+                str(filepath.relative_to(self.archive_dir))
+                if filepath.exists()
+                else str(filepath)
+            ),
+            file_hash_sha256=file_hash,
+            download_timestamp=datetime.now(timezone.utc),
+            source_url=info.get("webpage_url", video_url),
+            status=status,
+            notes=notes,
+        )
+
     def discover_sessions(self, channel_url: str) -> list[dict]:
         """Discover all House of Assembly videos from a YouTube channel.
 
@@ -205,43 +268,11 @@ class SessionDownloader:
                             f"catalogue, marking as duplicate"
                         )
                         # Create entry but mark as duplicate
-                        upload_date_str = info.get("upload_date", "")
-                        upload_date_obj = None
-                        if upload_date_str:
-                            try:
-                                upload_date_obj = datetime.strptime(
-                                    upload_date_str, "%Y%m%d"
-                                ).date()
-                            except ValueError:
-                                pass
-
-                        audio_format = "opus"
-                        audio_bitrate = 128
-                        if (
-                            "requested_downloads" in info
-                            and info["requested_downloads"]
-                        ):
-                            req_dl = info["requested_downloads"][0]
-                            audio_format = req_dl.get("ext", "opus")
-                            audio_bitrate = req_dl.get("abr", 128) or 128
-
-                        upload_date_fallback = datetime.now(timezone.utc).date()
-                        entry = SessionAudio(
-                            video_id=info.get("id", ""),
-                            title=info.get("title", ""),
-                            parsed_date=None,
-                            upload_date=upload_date_obj or upload_date_fallback,
-                            duration_seconds=info.get("duration", 0) or 0,
-                            audio_format=audio_format,
-                            audio_bitrate_kbps=int(audio_bitrate),
-                            file_path=(
-                                str(filepath.relative_to(self.archive_dir))
-                                if filepath.exists()
-                                else str(filepath)
-                            ),
-                            file_hash_sha256=file_hash,
-                            download_timestamp=datetime.now(timezone.utc),
-                            source_url=info.get("webpage_url", video_url),
+                        entry = self._create_session_audio_entry(
+                            info=info,
+                            filepath=filepath,
+                            file_hash=file_hash,
+                            video_url=video_url,
                             status=DownloadStatus.SKIPPED_DUPLICATE,
                             notes="Skipped: file hash matches existing download",
                         )
@@ -255,43 +286,12 @@ class SessionDownloader:
                         }
 
                 # Create catalogue entry
-                upload_date_str = info.get("upload_date", "")
-                upload_date_obj = None
-                if upload_date_str:
-                    try:
-                        upload_date_obj = datetime.strptime(
-                            upload_date_str, "%Y%m%d"
-                        ).date()
-                    except ValueError:
-                        pass
-
-                # Extract audio format info
-                audio_format = "opus"
-                audio_bitrate = 128
-
-                if "requested_downloads" in info and info["requested_downloads"]:
-                    req_dl = info["requested_downloads"][0]
-                    audio_format = req_dl.get("ext", "opus")
-                    audio_bitrate = req_dl.get("abr", 128) or 128
-
-                entry = SessionAudio(
-                    video_id=info.get("id", ""),
-                    title=info.get("title", ""),
-                    parsed_date=None,  # To be parsed later
-                    upload_date=upload_date_obj or datetime.now(timezone.utc).date(),
-                    duration_seconds=info.get("duration", 0) or 0,
-                    audio_format=audio_format,
-                    audio_bitrate_kbps=int(audio_bitrate),
-                    file_path=(
-                        str(filepath.relative_to(self.archive_dir))
-                        if filepath.exists()
-                        else str(filepath)
-                    ),
-                    file_hash_sha256=file_hash,
-                    download_timestamp=datetime.now(timezone.utc),
-                    source_url=info.get("webpage_url", video_url),
+                entry = self._create_session_audio_entry(
+                    info=info,
+                    filepath=filepath,
+                    file_hash=file_hash,
+                    video_url=video_url,
                     status=DownloadStatus.DOWNLOADED,
-                    notes=None,
                 )
 
                 # Add to catalogue
