@@ -101,6 +101,23 @@ class AudioCatalogue:
         """
         return any(entry.video_id == video_id for entry in self.entries)
 
+    def is_duplicate_by_hash(self, file_hash: str) -> bool:
+        """Check if a file hash already exists in the catalogue.
+
+        Args:
+            file_hash: SHA-256 file hash to check
+
+        Returns:
+            True if the file hash exists in the catalogue, False otherwise
+        """
+        if not file_hash:
+            return False
+        return any(
+            entry.file_hash_sha256 == file_hash
+            for entry in self.entries
+            if entry.status == DownloadStatus.DOWNLOADED
+        )
+
     def get_all_entries(self) -> list[SessionAudio]:
         """Return all catalogue entries.
 

@@ -196,6 +196,101 @@ class TestAudioCatalogue:
             assert len(entries) == 1
             assert entries[0].title == "Updated Title"
 
+    def test_catalogue_is_duplicate_by_hash(self):
+        """Test hash-based duplicate detection."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            catalogue_path = Path(tmpdir) / "catalogue.json"
+            catalogue = AudioCatalogue(str(catalogue_path))
+
+            fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            entry = SessionAudio(
+                video_id="hash_test_123",
+                title="Hash Test Session",
+                upload_date=datetime(2024, 1, 1).date(),
+                duration_seconds=1800,
+                audio_format="opus",
+                audio_bitrate_kbps=128,
+                file_path="test.opus",
+                file_hash_sha256="abc123def456",
+                download_timestamp=fixed_time,
+                source_url="https://youtube.com/watch?v=hash_test_123",
+                status=DownloadStatus.DOWNLOADED,
+            )
+
+            assert not catalogue.is_duplicate_by_hash("abc123def456")
+            catalogue.add_entry(entry)
+            assert catalogue.is_duplicate_by_hash("abc123def456")
+            assert not catalogue.is_duplicate_by_hash("different_hash")
+
+    def test_catalogue_is_duplicate_by_hash_ignores_failed(self):
+        """Test that hash duplicate detection ignores failed downloads."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            catalogue_path = Path(tmpdir) / "catalogue.json"
+            catalogue = AudioCatalogue(str(catalogue_path))
+
+            fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            # Add a failed entry with a hash
+            failed_entry = SessionAudio(
+                video_id="failed_123",
+                title="Failed Session",
+                upload_date=datetime(2024, 1, 1).date(),
+                duration_seconds=0,
+                audio_format="",
+                audio_bitrate_kbps=0,
+                file_path="",
+                file_hash_sha256="failed_hash_123",
+                download_timestamp=fixed_time,
+                source_url="https://youtube.com/watch?v=failed_123",
+                status=DownloadStatus.FAILED,
+            )
+            catalogue.add_entry(failed_entry)
+
+            # Hash should not be considered a duplicate because status is FAILED
+            assert not catalogue.is_duplicate_by_hash("failed_hash_123")
+
+            # Add a successful entry with same hash
+            success_entry = SessionAudio(
+                video_id="success_123",
+                title="Success Session",
+                upload_date=datetime(2024, 1, 1).date(),
+                duration_seconds=1800,
+                audio_format="opus",
+                audio_bitrate_kbps=128,
+                file_path="test.opus",
+                file_hash_sha256="failed_hash_123",
+                download_timestamp=fixed_time,
+                source_url="https://youtube.com/watch?v=success_123",
+                status=DownloadStatus.DOWNLOADED,
+            )
+            catalogue.add_entry(success_entry)
+
+            # Now it should be a duplicate
+            assert catalogue.is_duplicate_by_hash("failed_hash_123")
+
+    def test_catalogue_is_duplicate_by_hash_empty_string(self):
+        """Empty hash string never matches as duplicate."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            catalogue_path = Path(tmpdir) / "catalogue.json"
+            catalogue = AudioCatalogue(str(catalogue_path))
+
+            # Add a valid entry
+            entry = SessionAudio(
+                video_id="hash_empty_test",
+                title="Hash Empty Test",
+                upload_date=datetime(2024, 1, 1).date(),
+                duration_seconds=1800,
+                audio_format="opus",
+                audio_bitrate_kbps=128,
+                file_path="test.opus",
+                file_hash_sha256="real_hash_value",
+                download_timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                source_url="https://youtube.com/watch?v=hash_empty_test",
+                status=DownloadStatus.DOWNLOADED,
+            )
+            catalogue.add_entry(entry)
+
+            assert not catalogue.is_duplicate_by_hash("")
+
 
 class TestSessionDownloader:
     """Test SessionDownloader functionality."""
@@ -286,6 +381,75 @@ class TestSessionDownloader:
             assert result["status"] == "success"
             assert result["video_id"] == "testvideo"
             assert downloader.download_count == 1
+
+    @patch("time.sleep")
+    @patch("yt_dlp.YoutubeDL")
+    def test_download_session_detects_hash_duplicate(self, mock_ytdl_class, mock_sleep):
+        """Test that downloader detects hash-based duplicates."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create first audio file
+            year_dir = Path(tmpdir) / "2024"
+            date_dir = year_dir / "20240101"
+            date_dir.mkdir(parents=True)
+            test_file1 = date_dir / "video1.opus"
+            test_file1.write_bytes(b"fake audio data")
+
+            # Create second location with identical content
+            date_dir2 = year_dir / "20240102"
+            date_dir2.mkdir(parents=True)
+            test_file2 = date_dir2 / "video2.opus"
+            test_file2.write_bytes(b"fake audio data")  # Same content = same hash
+
+            # Mock yt-dlp for first download
+            mock_ytdl = MagicMock()
+            mock_ytdl_class.return_value.__enter__.return_value = mock_ytdl
+            mock_ytdl.extract_info.return_value = {
+                "id": "video1",
+                "title": "Test Session 1",
+                "webpage_url": "https://youtube.com/watch?v=video1",
+                "upload_date": "20240101",
+                "duration": 1800,
+                "requested_downloads": [{
+                    "filepath": str(test_file1),
+                    "ext": "opus",
+                    "abr": 128,
+                }],
+            }
+
+            downloader = SessionDownloader(
+                archive_dir=tmpdir,
+                sleep_interval=1,
+                max_downloads=10,
+            )
+
+            # Download first video
+            result1 = downloader.download_session("https://youtube.com/watch?v=video1")
+            assert result1["status"] == "success"
+
+            # Mock yt-dlp for second download (same content, different video)
+            mock_ytdl.extract_info.return_value = {
+                "id": "video2",
+                "title": "Test Session 2",
+                "webpage_url": "https://youtube.com/watch?v=video2",
+                "upload_date": "20240102",
+                "duration": 1800,
+                "requested_downloads": [{
+                    "filepath": str(test_file2),
+                    "ext": "opus",
+                    "abr": 128,
+                }],
+            }
+
+            # Download second video - should detect duplicate by hash
+            result2 = downloader.download_session("https://youtube.com/watch?v=video2")
+            assert result2["status"] == "skipped_duplicate"
+            assert result2["reason"] == "hash_match"
+
+            # Verify catalogue has both entries
+            entries = downloader.catalogue.get_all_entries()
+            assert len(entries) == 2
+            assert entries[0].status == DownloadStatus.DOWNLOADED
+            assert entries[1].status == DownloadStatus.SKIPPED_DUPLICATE
 
 
 class TestCLI:
