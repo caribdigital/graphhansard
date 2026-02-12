@@ -307,53 +307,41 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "Full scrape" in captured.out
 
-    def test_cli_status_no_catalogue(self, capsys):
+    def test_cli_status_no_catalogue(self, capsys, monkeypatch, tmp_path):
         """Test status command with no catalogue."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            import os
-            old_cwd = os.getcwd()
-            try:
-                os.chdir(tmpdir)
-                exit_code = main(["status"])
-                assert exit_code == 0
+        monkeypatch.chdir(tmp_path)
+        exit_code = main(["status"])
+        assert exit_code == 0
 
-                captured = capsys.readouterr()
-                assert "No catalogue found" in captured.out
-            finally:
-                os.chdir(old_cwd)
+        captured = capsys.readouterr()
+        assert "No catalogue found" in captured.out
 
-    def test_cli_add_manual(self):
+    def test_cli_add_manual(self, monkeypatch, tmp_path):
         """Test add-manual command."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Create a fake audio file
-            test_file = Path(tmpdir) / "test.opus"
-            test_file.write_bytes(b"fake audio")
+        # Create a fake audio file
+        test_file = tmp_path / "test.opus"
+        test_file.write_bytes(b"fake audio")
 
-            # Create archive directory
-            archive_dir = Path(tmpdir) / "archive"
-            archive_dir.mkdir()
+        # Create archive directory
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
 
-            import os
-            old_cwd = os.getcwd()
-            try:
-                os.chdir(tmpdir)
-                exit_code = main([
-                    "add-manual",
-                    str(test_file),
-                    "--date", "2024-01-01",
-                    "--title", "Manual Session"
-                ])
+        monkeypatch.chdir(tmp_path)
+        exit_code = main([
+            "add-manual",
+            str(test_file),
+            "--date", "2024-01-01",
+            "--title", "Manual Session"
+        ])
 
-                assert exit_code == 0
+        assert exit_code == 0
 
-                # Check catalogue was created
-                catalogue_path = archive_dir / "catalogue.json"
-                assert catalogue_path.exists()
+        # Check catalogue was created
+        catalogue_path = archive_dir / "catalogue.json"
+        assert catalogue_path.exists()
 
-                # Verify entry
-                catalogue = AudioCatalogue(str(catalogue_path))
-                entries = catalogue.get_all_entries()
-                assert len(entries) == 1
-                assert entries[0].title == "Manual Session"
-            finally:
-                os.chdir(old_cwd)
+        # Verify entry
+        catalogue = AudioCatalogue(str(catalogue_path))
+        entries = catalogue.get_all_entries()
+        assert len(entries) == 1
+        assert entries[0].title == "Manual Session"

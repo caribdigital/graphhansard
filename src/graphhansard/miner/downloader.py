@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -260,14 +261,9 @@ class SessionDownloader:
         except Exception as e:
             logger.error(f"Error downloading {video_url}: {e}")
 
-            # Try to extract video ID even on failure
-            video_id = None
-            try:
-                with yt_dlp.YoutubeDL({"quiet": True}) as ydl:
-                    info = ydl.extract_info(video_url, download=False)
-                    video_id = info.get("id")
-            except Exception:
-                pass
+            # Extract video ID from URL without network call
+            match = re.search(r'[?&]v=([^&]+)', video_url)
+            video_id = match.group(1) if match else None
 
             # Record failure in catalogue
             if video_id:

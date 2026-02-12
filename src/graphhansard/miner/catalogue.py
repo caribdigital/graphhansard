@@ -70,7 +70,7 @@ class AudioCatalogue:
         """Save catalogue to JSON file."""
         with open(self.catalogue_path, "w") as f:
             data = [entry.model_dump(mode="json") for entry in self.entries]
-            json.dump(data, f, indent=2, default=str)
+            json.dump(data, f, indent=2)
 
     def add_entry(self, entry: SessionAudio) -> None:
         """Add a new entry to the catalogue.
