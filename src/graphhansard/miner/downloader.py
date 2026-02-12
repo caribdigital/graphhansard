@@ -33,6 +33,7 @@ class SessionDownloader:
         cookies_path: str | None = None,
         sleep_interval: int = 5,
         max_downloads: int = 50,
+        delete_duplicates: bool = True,
     ):
         """Initialize the SessionDownloader.
 
@@ -41,11 +42,13 @@ class SessionDownloader:
             cookies_path: Optional path to Netscape-format cookies file
             sleep_interval: Seconds to wait between downloads (rate limiting)
             max_downloads: Maximum number of downloads per session
+            delete_duplicates: Whether to delete files detected as hash duplicates
         """
         self.archive_dir = Path(archive_dir)
         self.cookies_path = cookies_path
         self.sleep_interval = sleep_interval
         self.max_downloads = max_downloads
+        self.delete_duplicates = delete_duplicates
         self.download_count = 0
 
         # Create archive directory if it doesn't exist
@@ -96,6 +99,49 @@ class SessionDownloader:
             opts["cookiefile"] = self.cookies_path
 
         return opts
+
+    def _compute_file_hash(self, filepath: Path) -> str:
+        """Compute SHA-256 hash of a file using chunked reads.
+
+        Args:
+            filepath: Path to the file to hash
+
+        Returns:
+            Hex-encoded SHA-256 hash string
+        """
+        h = hashlib.sha256()
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    def _create_failed_entry(
+        self, video_id: str, video_url: str, error: str
+    ) -> SessionAudio:
+        """Create a SessionAudio entry for a failed download.
+
+        Args:
+            video_id: YouTube video ID
+            video_url: Original video URL
+            error: Error message
+
+        Returns:
+            SessionAudio entry with FAILED status
+        """
+        return SessionAudio(
+            video_id=video_id,
+            title="",
+            upload_date=datetime.now(timezone.utc).date(),
+            duration_seconds=0,
+            audio_format="",
+            audio_bitrate_kbps=0,
+            file_path="",
+            file_hash_sha256="",
+            download_timestamp=datetime.now(timezone.utc),
+            source_url=video_url,
+            status=DownloadStatus.FAILED,
+            notes=error,
+        )
 
     def _create_session_audio_entry(
         self,
@@ -258,8 +304,7 @@ class SessionDownloader:
                 # Calculate file hash if file exists
                 file_hash = ""
                 if filepath.exists():
-                    with open(filepath, "rb") as f:
-                        file_hash = hashlib.sha256(f.read()).hexdigest()
+                    file_hash = self._compute_file_hash(filepath)
 
                     # Check for hash-based duplicate
                     if self.catalogue.is_duplicate_by_hash(file_hash):
@@ -269,12 +314,17 @@ class SessionDownloader:
                         )
 
                         # Delete the duplicate file to save storage space
-                        try:
-                            filepath.unlink()
-                            logger.info(f"Deleted duplicate file: {filepath}")
-                        except Exception as e:
-                            logger.warning(
-                                f"Could not delete duplicate file {filepath}: {e}"
+                        if self.delete_duplicates:
+                            try:
+                                filepath.unlink()
+                                logger.info(f"Deleted duplicate file: {filepath}")
+                            except Exception as e:
+                                logger.warning(
+                                    f"Could not delete duplicate file {filepath}: {e}"
+                                )
+                        else:
+                            logger.info(
+                                f"Keeping duplicate file (delete_duplicates=False): {filepath}"
                             )
 
                         # Create entry but mark as duplicate
@@ -333,20 +383,7 @@ class SessionDownloader:
 
             # Record failure in catalogue
             if video_id:
-                entry = SessionAudio(
-                    video_id=video_id,
-                    title="",
-                    upload_date=datetime.now(timezone.utc).date(),
-                    duration_seconds=0,
-                    audio_format="",
-                    audio_bitrate_kbps=0,
-                    file_path="",
-                    file_hash_sha256="",
-                    download_timestamp=datetime.now(timezone.utc),
-                    source_url=video_url,
-                    status=DownloadStatus.FAILED,
-                    notes=str(e),
-                )
+                entry = self._create_failed_entry(video_id, video_url, str(e))
                 self.catalogue.add_entry(entry)
 
             return {

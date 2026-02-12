@@ -267,6 +267,30 @@ class TestAudioCatalogue:
             # Now it should be a duplicate
             assert catalogue.is_duplicate_by_hash("failed_hash_123")
 
+    def test_catalogue_is_duplicate_by_hash_empty_string(self):
+        """Empty hash string never matches as duplicate."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            catalogue_path = Path(tmpdir) / "catalogue.json"
+            catalogue = AudioCatalogue(str(catalogue_path))
+
+            # Add a valid entry
+            entry = SessionAudio(
+                video_id="hash_empty_test",
+                title="Hash Empty Test",
+                upload_date=datetime(2024, 1, 1).date(),
+                duration_seconds=1800,
+                audio_format="opus",
+                audio_bitrate_kbps=128,
+                file_path="test.opus",
+                file_hash_sha256="real_hash_value",
+                download_timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                source_url="https://youtube.com/watch?v=hash_empty_test",
+                status=DownloadStatus.DOWNLOADED,
+            )
+            catalogue.add_entry(entry)
+
+            assert not catalogue.is_duplicate_by_hash("")
+
 
 class TestSessionDownloader:
     """Test SessionDownloader functionality."""
