@@ -33,13 +33,13 @@ miner = [
     "yt-dlp",
 ]
 brain = [
-    "openai-whisper",
-    "faster-whisper",
-    "pyannote.audio>=3.0",
-    "whisperx",
+    "faster-whisper>=0.10.0",
+    "pyannote.audio>=3.1.0",
+    "whisperx @ git+https://github.com/m-bain/whisperx.git",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "transformers>=4.30.0",
     "spacy>=3.0",
-    "transformers",
-    "torch",
 ]
 dashboard = [
     "streamlit>=1.0",
@@ -58,6 +58,9 @@ all = [
 Homepage = "https://github.com/caribdigital/graphhansard"
 Repository = "https://github.com/caribdigital/graphhansard"
 Issues = "https://github.com/caribdigital/graphhansard/issues"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/graphhansard"]
