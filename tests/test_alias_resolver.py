@@ -290,19 +290,18 @@ class TestBahamianCreoleNormalization:
         assert result.confidence >= 0.85
 
     def test_bc2_vowel_shift_carmikle(self):
-        """BC-2: 'Carmikle' resolves to Carmichael."""
+        """BC-2: 'Member for Carmikle' resolves to Carmichael constituency."""
         resolver = AliasResolver(str(GOLDEN_RECORD_PATH))
-        result = resolver.resolve("Carmikle")
-        # Should fuzzy match to Carmichael (if that's a surname or constituency)
-        assert result.method in ["exact", "fuzzy", "unresolved"]
-        # May not match if no MP has Carmichael in their aliases
+        result = resolver.resolve("Member for Carmikle")
+        assert result.node_id == "mp_bell_keith"
+        assert result.method == "exact"
 
     def test_bc2_vowel_shift_killarny(self):
-        """BC-2: 'Killarny' resolves to Killarney."""
+        """BC-2: 'Member for Killarny' resolves to Killarney constituency."""
         resolver = AliasResolver(str(GOLDEN_RECORD_PATH))
-        result = resolver.resolve("Killarny")
-        # Should fuzzy match to Killarney (if that's a constituency)
-        assert result.method in ["exact", "fuzzy", "unresolved"]
+        result = resolver.resolve("Member for Killarny")
+        assert result.node_id == "mp_minnis_hubert"
+        assert result.method == "exact"
 
     def test_disable_creole_normalization(self):
         """Can disable Creole normalization."""

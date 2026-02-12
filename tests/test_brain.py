@@ -480,13 +480,41 @@ class TestBahamianCreoleTranscription:
 
     def test_normalize_creole_flag_affects_transcription(self):
         """BC-1, BC-2, BC-3: normalize_creole flag is properly stored.
-        
+
         Note: Full integration test would require Whisper models to be installed.
         The actual normalization logic is tested in test_creole_utils.py.
         This test verifies the flag is properly stored for use in transcription.
         """
         t_enabled = Transcriber(device="cpu", normalize_creole=True)
         t_disabled = Transcriber(device="cpu", normalize_creole=False)
-        
+
         assert t_enabled.normalize_creole is True
         assert t_disabled.normalize_creole is False
+
+    @patch("graphhansard.brain.transcriber.normalize_bahamian_creole")
+    @patch.object(Transcriber, "_load_model")
+    def test_creole_normalization_called_during_transcription(self, mock_load, mock_normalize):
+        """Normalization is applied to segment text during faster-whisper transcription."""
+        mock_normalize.side_effect = lambda t: t.replace("da", "the")
+
+        mock_model = MagicMock()
+        mock_segment = MagicMock()
+        mock_segment.text = "da Member spoke"
+        mock_segment.start = 0.0
+        mock_segment.end = 5.0
+        mock_segment.avg_logprob = -0.5
+        mock_segment.words = []
+
+        mock_info = MagicMock()
+        mock_info.language = "en"
+        mock_info.language_probability = 0.99
+        mock_info.duration = 5.0
+
+        mock_model.transcribe.return_value = ([mock_segment], mock_info)
+        mock_load.return_value = mock_model
+
+        t = Transcriber(device="cpu", backend="faster-whisper", normalize_creole=True)
+        result = t.transcribe("/tmp/test.wav")
+
+        mock_normalize.assert_called_once_with("da Member spoke")
+        assert result["segments"][0]["text"] == "the Member spoke"

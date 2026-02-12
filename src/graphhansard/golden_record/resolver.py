@@ -21,6 +21,7 @@ from pathlib import Path
 from rapidfuzz import fuzz
 
 from .models import GoldenRecord
+from ..brain.creole_utils import normalize_bahamian_creole
 
 
 @dataclass
@@ -79,8 +80,6 @@ class AliasResolver:
         """
         # Apply Bahamian Creole normalization if enabled (BC-1, BC-2)
         if self.normalize_creole:
-            # Import here to avoid circular dependency
-            from ..brain.creole_utils import normalize_bahamian_creole
             mention = normalize_bahamian_creole(mention)
         
         # Normalize the mention
