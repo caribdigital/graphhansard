@@ -2,11 +2,14 @@
 
 Transcribes parliamentary session audio to text with word-level timestamps.
 See SRD §8.2 (BR-1, BR-3, BR-4, BR-6) for specification.
+Includes Bahamian Creole normalization (BC-1, BC-2, BC-3).
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+
+from .creole_utils import normalize_bahamian_creole
 
 
 class WordToken(BaseModel):
@@ -44,6 +47,7 @@ class Transcriber:
 
     See SRD §8.2 for specification.
     Supports both faster-whisper and insanely-fast-whisper backends.
+    Includes Bahamian Creole normalization (BC-1, BC-2, BC-3).
     """
 
     def __init__(
@@ -52,6 +56,7 @@ class Transcriber:
         device: str = "cuda",
         compute_type: str = "float16",
         backend: str = "faster-whisper",
+        normalize_creole: bool = True,
     ):
         """Initialize the Transcriber.
 
@@ -60,11 +65,13 @@ class Transcriber:
             device: Device to run on ("cuda" or "cpu")
             compute_type: Computation precision ("float16", "int8", "float32")
             backend: "faster-whisper" (CTranslate2) or "insanely-fast-whisper" (Flash Attention 2)
+            normalize_creole: Whether to apply Bahamian Creole normalization (default: True)
         """
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type
         self.backend = backend
+        self.normalize_creole = normalize_creole
         self._model = None
 
     def _normalize_confidence(self, log_prob: float) -> float:
@@ -151,10 +158,15 @@ class Transcriber:
             # Convert generator to list and extract segments
             result_segments = []
             for segment in segments:
+                # Apply Creole normalization if enabled (BC-1, BC-2, BC-3)
+                segment_text = segment.text
+                if self.normalize_creole:
+                    segment_text = normalize_bahamian_creole(segment_text)
+                
                 segment_dict = {
                     "start": segment.start,
                     "end": segment.end,
-                    "text": segment.text,
+                    "text": segment_text,
                     "confidence": self._normalize_confidence(segment.avg_logprob),  # Transform log prob to [0,1]
                     "words": [],
                 }
@@ -188,10 +200,15 @@ class Transcriber:
             # Transform to consistent format
             segments = []
             for chunk in result.get("chunks", []):
+                # Apply Creole normalization if enabled (BC-1, BC-2, BC-3)
+                chunk_text = chunk["text"]
+                if self.normalize_creole:
+                    chunk_text = normalize_bahamian_creole(chunk_text)
+                
                 segment_dict = {
                     "start": chunk["timestamp"][0],
                     "end": chunk["timestamp"][1],
-                    "text": chunk["text"],
+                    "text": chunk_text,
                     "confidence": 1.0,  # Not directly available in this backend
                     "words": [],
                 }
