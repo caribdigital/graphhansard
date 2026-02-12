@@ -150,9 +150,12 @@ def handle_add_manual(args: argparse.Namespace) -> int:
             logger.error(f"Invalid date format: {args.date}. Use YYYY-MM-DD.")
             return 1
 
-        # Calculate file hash
+        # Calculate file hash (chunked for large files)
+        h = hashlib.sha256()
         with open(file_path, "rb") as f:
-            file_hash = hashlib.sha256(f.read()).hexdigest()
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        file_hash = h.hexdigest()
 
         # Get file info
         file_ext = file_path.suffix.lstrip(".")

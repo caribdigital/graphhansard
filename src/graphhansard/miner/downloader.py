@@ -398,7 +398,6 @@ class SessionDownloader:
                         self.catalogue.add_entry(entry)
 
                         # Log the skip
-                        duration = time.time() - start_time
                         self.download_logger.log_download_skipped(video_id, "duplicate")
 
                         return {

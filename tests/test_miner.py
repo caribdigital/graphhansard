@@ -547,7 +547,7 @@ class TestDownloadLogger:
             assert entry["action"] == "download"
             assert entry["reason"] == "success"
             assert entry["duration"] == 45.5
-            assert entry["file_path"] == "archive/2024/20240101/test123.opus"
+            assert entry["metadata"]["file_path"] == "archive/2024/20240101/test123.opus"
             assert "timestamp" in entry
 
     def test_log_download_failed(self):
@@ -574,7 +574,7 @@ class TestDownloadLogger:
             assert entry["action"] == "download"
             assert entry["reason"] == "failed"
             assert entry["duration"] == 10.2
-            assert entry["error"] == "Connection timeout"
+            assert entry["metadata"]["error"] == "Connection timeout"
 
     def test_log_download_skipped(self):
         """Test logging a skipped download."""
@@ -623,8 +623,8 @@ class TestDownloadLogger:
             assert entry["video_id"] == "manual_abc123"
             assert entry["action"] == "manual_add"
             assert entry["reason"] == "success"
-            assert entry["file_path"] == "/path/to/manual.opus"
-            assert entry["title"] == "Manual Session"
+            assert entry["metadata"]["file_path"] == "/path/to/manual.opus"
+            assert entry["metadata"]["title"] == "Manual Session"
 
     def test_multiple_log_entries(self):
         """Test logging multiple entries to the same file."""

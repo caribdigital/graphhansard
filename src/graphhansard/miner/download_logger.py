@@ -58,9 +58,9 @@ class DownloadLogger:
             "duration": duration,
         }
 
-        # Add metadata if provided
+        # Add metadata if provided (namespaced to prevent core field overwrites)
         if metadata:
-            entry.update(metadata)
+            entry["metadata"] = metadata
 
         # Append to log file
         try:
