@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from rapidfuzz import fuzz
@@ -196,6 +196,7 @@ class AliasResolver:
         """
         best_score = 0
         best_node_id = None
+        found_perfect = False
 
         # Get all candidate aliases
         for mp in self.golden_record.mps:
@@ -213,6 +214,11 @@ class AliasResolver:
                 if score > best_score:
                     best_score = score
                     best_node_id = mp.node_id
+                    if best_score == 100:
+                        found_perfect = True
+                        break
+            if found_perfect:
+                break
 
         # Check if best match exceeds threshold
         if best_score >= self.fuzzy_threshold:
@@ -239,7 +245,7 @@ class AliasResolver:
             {
                 "mention": mention,
                 "debate_date": debate_date,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
