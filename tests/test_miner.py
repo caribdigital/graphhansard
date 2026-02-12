@@ -13,6 +13,7 @@ import pytest
 
 from graphhansard.miner.catalogue import AudioCatalogue, DownloadStatus, SessionAudio
 from graphhansard.miner.cli import main
+from graphhansard.miner.download_logger import DownloadLogger
 from graphhansard.miner.downloader import SessionDownloader
 
 
@@ -509,3 +510,190 @@ class TestCLI:
         entries = catalogue.get_all_entries()
         assert len(entries) == 1
         assert entries[0].title == "Manual Session"
+
+
+class TestDownloadLogger:
+    """Test DownloadLogger structured logging."""
+
+    def test_download_logger_initialization(self):
+        """Test initializing the download logger."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            assert log_path.exists()
+
+    def test_log_download_success(self):
+        """Test logging a successful download."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            logger.log_download_success(
+                video_id="test123",
+                duration=45.5,
+                file_path="archive/2024/20240101/test123.opus",
+            )
+
+            # Verify log entry
+            with open(log_path, "r") as f:
+                entries = [json.loads(line) for line in f]
+
+            assert len(entries) == 1
+            entry = entries[0]
+            assert entry["video_id"] == "test123"
+            assert entry["action"] == "download"
+            assert entry["reason"] == "success"
+            assert entry["duration"] == 45.5
+            assert entry["file_path"] == "archive/2024/20240101/test123.opus"
+            assert "timestamp" in entry
+
+    def test_log_download_failed(self):
+        """Test logging a failed download."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            logger.log_download_failed(
+                video_id="test456",
+                duration=10.2,
+                error="Connection timeout",
+            )
+
+            # Verify log entry
+            with open(log_path, "r") as f:
+                entries = [json.loads(line) for line in f]
+
+            assert len(entries) == 1
+            entry = entries[0]
+            assert entry["video_id"] == "test456"
+            assert entry["action"] == "download"
+            assert entry["reason"] == "failed"
+            assert entry["duration"] == 10.2
+            assert entry["error"] == "Connection timeout"
+
+    def test_log_download_skipped(self):
+        """Test logging a skipped download."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            logger.log_download_skipped(
+                video_id="test789",
+                reason="duplicate",
+            )
+
+            # Verify log entry
+            with open(log_path, "r") as f:
+                entries = [json.loads(line) for line in f]
+
+            assert len(entries) == 1
+            entry = entries[0]
+            assert entry["video_id"] == "test789"
+            assert entry["action"] == "skip"
+            assert entry["reason"] == "duplicate"
+            assert entry["duration"] is None
+
+    def test_log_manual_addition(self):
+        """Test logging a manual file addition."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            logger.log_manual_addition(
+                video_id="manual_abc123",
+                file_path="/path/to/manual.opus",
+                title="Manual Session",
+            )
+
+            # Verify log entry
+            with open(log_path, "r") as f:
+                entries = [json.loads(line) for line in f]
+
+            assert len(entries) == 1
+            entry = entries[0]
+            assert entry["video_id"] == "manual_abc123"
+            assert entry["action"] == "manual_add"
+            assert entry["reason"] == "success"
+            assert entry["file_path"] == "/path/to/manual.opus"
+            assert entry["title"] == "Manual Session"
+
+    def test_multiple_log_entries(self):
+        """Test logging multiple entries to the same file."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "download_log.jsonl"
+            logger = DownloadLogger(str(log_path))
+
+            # Log multiple entries
+            logger.log_download_success("video1", 30.0, "file1.opus")
+            logger.log_download_failed("video2", 5.0, "Error")
+            logger.log_download_skipped("video3", "duplicate")
+
+            # Verify all entries
+            with open(log_path, "r") as f:
+                entries = [json.loads(line) for line in f]
+
+            assert len(entries) == 3
+            assert entries[0]["video_id"] == "video1"
+            assert entries[1]["video_id"] == "video2"
+            assert entries[2]["video_id"] == "video3"
+
+
+class TestProxyRotation:
+    """Test proxy rotation functionality."""
+
+    def test_proxy_list_loading(self):
+        """Test loading proxy list from file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a proxy list file
+            proxy_list_path = Path(tmpdir) / "proxies.txt"
+            proxy_list_path.write_text("http://proxy1:8080\nhttp://proxy2:8080\n# Comment\n\nhttp://proxy3:8080\n")
+
+            downloader = SessionDownloader(
+                archive_dir=tmpdir,
+                proxy_list_path=str(proxy_list_path),
+            )
+
+            assert len(downloader.proxies) == 3
+            assert "http://proxy1:8080" in downloader.proxies
+            assert "http://proxy2:8080" in downloader.proxies
+            assert "http://proxy3:8080" in downloader.proxies
+
+    def test_proxy_rotation(self):
+        """Test that proxies rotate correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a proxy list file
+            proxy_list_path = Path(tmpdir) / "proxies.txt"
+            proxy_list_path.write_text("http://proxy1:8080\nhttp://proxy2:8080\n")
+
+            downloader = SessionDownloader(
+                archive_dir=tmpdir,
+                proxy_list_path=str(proxy_list_path),
+            )
+
+            # Get proxies in sequence
+            proxy1 = downloader._get_next_proxy()
+            proxy2 = downloader._get_next_proxy()
+            proxy3 = downloader._get_next_proxy()
+
+            assert proxy1 == "http://proxy1:8080"
+            assert proxy2 == "http://proxy2:8080"
+            assert proxy3 == "http://proxy1:8080"  # Should wrap around
+
+    def test_downloader_without_proxy(self):
+        """Test that downloader works without proxy list."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            downloader = SessionDownloader(archive_dir=tmpdir)
+
+            assert downloader.proxies == []
+            assert downloader._get_next_proxy() is None
