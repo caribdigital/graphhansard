@@ -78,7 +78,12 @@ class PortfolioTenure(BaseModel):
 
 
 class MPNode(BaseModel):
-    """Canonical profile for a single Member of Parliament."""
+    """Canonical profile for a single Member of Parliament.
+
+    Per GR-8: Supports versioning by parliamentary term. The node_id
+    is stable across terms (e.g., 'mp_davis_brave'), allowing tracking
+    of MPs who serve in multiple parliaments.
+    """
 
     node_id: str = Field(description="Unique ID, e.g. 'mp_davis_brave'")
     full_name: str = Field(description="Legal full name")
@@ -92,6 +97,13 @@ class MPNode(BaseModel):
     seat_status: SeatStatus
     first_elected: str | None = None
     election_notes: str | None = None
+    parliament_terms: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Parliamentary terms served "
+            "(e.g., ['14th Parliament', '13th Parliament']). Per GR-8."
+        )
+    )
     portfolios: list[PortfolioTenure] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
     special_roles: list[str] = Field(default_factory=list)
