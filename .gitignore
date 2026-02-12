@@ -34,6 +34,9 @@ graphs/exports/
 # Validation audio clips
 golden_record/validation/audio/
 
+# Generated alias index (rebuilt at runtime by AliasResolver)
+golden_record/aliases_index.json
+
 # Model weights and caches (too large for git)
 models/
 *.pt
