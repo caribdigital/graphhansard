@@ -188,7 +188,10 @@ class SubmissionQueue(BaseModel):
         Returns:
             The submission if found, None otherwise
         """
-        return next((s for s in self.submissions if s.submission_id == submission_id), None)
+        return next(
+            (s for s in self.submissions if s.submission_id == submission_id),
+            None,
+        )
 
     def _update_status_counts(self) -> None:
         """Update status counts in metadata."""

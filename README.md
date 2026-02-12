@@ -215,10 +215,47 @@ See [SRD v1.0](docs/SRD_v1.0.md) for the full requirements document and timeline
 
 GraphHansard is built for the Bahamian public. Contributions are welcome, particularly in:
 
-- **Alias additions** — Know a nickname or informal reference used in House debate? Open an issue or PR against `golden_record/mps.json`.
+- **Alias additions** — Know a nickname or informal reference used in House debate? Submit it using our structured contribution system. See the [Community Contributions Guide](docs/community_contributions.md) for details.
 - **Transcript correction** — Once transcripts are generated, we'll need Bahamian ears to catch what Whisper misses.
 - **Validation corpus** — Help annotate real audio clips for testing entity resolution accuracy.
 - **Dashboard UX** — Design input for making the graph accessible to non-technical voters.
+
+### Community Alias Submissions (GR-9)
+
+We provide a structured mechanism for community-submitted alias additions and corrections:
+
+```bash
+# Submit a new alias
+python scripts/submit_alias.py \
+  --type alias_addition \
+  --alias "Papa" \
+  --target mp_davis_brave \
+  --evidence "Used in House debate 2024-01-15, video at https://..." \
+  --submitter "Your Name"
+```
+
+All submissions go through a review queue before being merged. See the [Community Contributions Guide](docs/community_contributions.md) for complete instructions.
+
+---
+
+## Data Export (GR-10)
+
+The Golden Record can be exported in multiple formats for independent use:
+
+```bash
+# Export all formats (JSON, CSV, alias index)
+python scripts/export_golden_record.py
+
+# Export specific format
+python scripts/export_golden_record.py --format csv
+```
+
+**Available formats:**
+- **JSON**: Canonical format with full metadata
+- **CSV**: Flattened format, one row per MP (spreadsheet-ready)
+- **Alias Index**: Inverted index mapping aliases to MPs
+
+All exports include metadata headers (version, date, parliament). See the [Data Export Guide](docs/data_export.md) for complete instructions.
 
 ---
 

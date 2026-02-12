@@ -16,7 +16,6 @@ import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from .models import GoldenRecord
 
@@ -36,7 +35,9 @@ class GoldenRecordExporter:
         data = self.golden_record_path.read_text(encoding="utf-8")
         self.golden_record = GoldenRecord.model_validate_json(data)
 
-    def export_json(self, output_path: str, include_metadata_header: bool = True) -> None:
+    def export_json(
+        self, output_path: str, include_metadata_header: bool = True
+    ) -> None:
         """Export the Golden Record as JSON (canonical format).
 
         Args:
@@ -175,7 +176,9 @@ class GoldenRecordExporter:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
-    def export_all(self, output_dir: str, prefix: str = "golden_record") -> dict[str, str]:
+    def export_all(
+        self, output_dir: str, prefix: str = "golden_record"
+    ) -> dict[str, str]:
         """Export all formats to a directory.
 
         Args:
