@@ -109,7 +109,8 @@ class TestSpeakerControlNode:
         assert all(not e.is_procedural for e in political)
 
         procedural = graph.procedural_edges()
-        assert len(procedural) == 1, f"Expected 1 procedural edge, got {len(procedural)}"
+        msg = f"Expected 1 procedural edge, got {len(procedural)}"
+        assert len(procedural) == 1, msg
         assert all(e.is_procedural for e in procedural)
         assert procedural[0].semantic_type == EdgeSemanticType.RECOGNIZING
 
@@ -184,21 +185,22 @@ class TestTemporalVersioning:
             assert isinstance(mp.parliament_terms, list)
 
     def test_stable_node_id_across_terms(self):
-        """GR-8: node_id design allows tracking MPs across parliamentary terms.
-        
-        Example: Brave Davis has served in multiple parliaments (13th, 14th).
-        The node_id 'mp_davis_brave' remains stable across terms.
+        """GR-8: node_id design allows tracking MPs across terms.
+
+        Example: Brave Davis has served in multiple parliaments
+        (13th, 14th). The node_id 'mp_davis_brave' remains stable
+        across terms.
         """
         record = _load_record()
         brave = next(mp for mp in record.mps if mp.node_id == "mp_davis_brave")
-        
+
         # Verify the node_id is stable (not parliament-specific)
         assert "mp_davis_brave" == brave.node_id
-        
+
         # Verify first_elected predates current parliament
         # Brave was first elected in 1992, current parliament started 2021
         assert brave.first_elected == "1992"
-        
+
         # The parliament_terms field can track which parliaments he served in
         # (This would be populated in future versions of the Golden Record)
         assert hasattr(brave, "parliament_terms")
