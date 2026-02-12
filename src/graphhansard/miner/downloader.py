@@ -197,6 +197,58 @@ class SessionDownloader:
                 if filepath.exists():
                     with open(filepath, "rb") as f:
                         file_hash = hashlib.sha256(f.read()).hexdigest()
+                    
+                    # Check for hash-based duplicate
+                    if self.catalogue.is_duplicate_by_hash(file_hash):
+                        logger.info(
+                            f"File hash {file_hash[:12]}... already exists in "
+                            f"catalogue, marking as duplicate"
+                        )
+                        # Create entry but mark as duplicate
+                        upload_date_str = info.get("upload_date", "")
+                        upload_date_obj = None
+                        if upload_date_str:
+                            try:
+                                upload_date_obj = datetime.strptime(
+                                    upload_date_str, "%Y%m%d"
+                                ).date()
+                            except ValueError:
+                                pass
+                        
+                        audio_format = "opus"
+                        audio_bitrate = 128
+                        if "requested_downloads" in info and info["requested_downloads"]:
+                            req_dl = info["requested_downloads"][0]
+                            audio_format = req_dl.get("ext", "opus")
+                            audio_bitrate = req_dl.get("abr", 128) or 128
+                        
+                        entry = SessionAudio(
+                            video_id=info.get("id", ""),
+                            title=info.get("title", ""),
+                            parsed_date=None,
+                            upload_date=upload_date_obj or datetime.now(timezone.utc).date(),
+                            duration_seconds=info.get("duration", 0) or 0,
+                            audio_format=audio_format,
+                            audio_bitrate_kbps=int(audio_bitrate),
+                            file_path=(
+                                str(filepath.relative_to(self.archive_dir))
+                                if filepath.exists()
+                                else str(filepath)
+                            ),
+                            file_hash_sha256=file_hash,
+                            download_timestamp=datetime.now(timezone.utc),
+                            source_url=info.get("webpage_url", video_url),
+                            status=DownloadStatus.SKIPPED_DUPLICATE,
+                            notes="Skipped: file hash matches existing download",
+                        )
+                        self.catalogue.add_entry(entry)
+                        
+                        return {
+                            "status": "skipped_duplicate",
+                            "url": video_url,
+                            "video_id": info.get("id"),
+                            "reason": "hash_match",
+                        }
 
                 # Create catalogue entry
                 upload_date_str = info.get("upload_date", "")
