@@ -242,7 +242,7 @@ class TestAudioCatalogue:
                 status=DownloadStatus.FAILED,
             )
             catalogue.add_entry(failed_entry)
-            
+
             # Hash should not be considered a duplicate because status is FAILED
             assert not catalogue.is_duplicate_by_hash("failed_hash_123")
 
@@ -261,7 +261,7 @@ class TestAudioCatalogue:
                 status=DownloadStatus.DOWNLOADED,
             )
             catalogue.add_entry(success_entry)
-            
+
             # Now it should be a duplicate
             assert catalogue.is_duplicate_by_hash("failed_hash_123")
 
@@ -367,7 +367,7 @@ class TestSessionDownloader:
             date_dir.mkdir(parents=True)
             test_file1 = date_dir / "video1.opus"
             test_file1.write_bytes(b"fake audio data")
-            
+
             # Create second location with identical content
             date_dir2 = year_dir / "20240102"
             date_dir2.mkdir(parents=True)
@@ -395,7 +395,7 @@ class TestSessionDownloader:
                 sleep_interval=1,
                 max_downloads=10,
             )
-            
+
             # Download first video
             result1 = downloader.download_session("https://youtube.com/watch?v=video1")
             assert result1["status"] == "success"
@@ -413,12 +413,12 @@ class TestSessionDownloader:
                     "abr": 128,
                 }],
             }
-            
+
             # Download second video - should detect duplicate by hash
             result2 = downloader.download_session("https://youtube.com/watch?v=video2")
             assert result2["status"] == "skipped_duplicate"
             assert result2["reason"] == "hash_match"
-            
+
             # Verify catalogue has both entries
             entries = downloader.catalogue.get_all_entries()
             assert len(entries) == 2

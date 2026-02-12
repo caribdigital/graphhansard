@@ -197,7 +197,7 @@ class SessionDownloader:
                 if filepath.exists():
                     with open(filepath, "rb") as f:
                         file_hash = hashlib.sha256(f.read()).hexdigest()
-                    
+
                     # Check for hash-based duplicate
                     if self.catalogue.is_duplicate_by_hash(file_hash):
                         logger.info(
@@ -214,19 +214,23 @@ class SessionDownloader:
                                 ).date()
                             except ValueError:
                                 pass
-                        
+
                         audio_format = "opus"
                         audio_bitrate = 128
-                        if "requested_downloads" in info and info["requested_downloads"]:
+                        if (
+                            "requested_downloads" in info
+                            and info["requested_downloads"]
+                        ):
                             req_dl = info["requested_downloads"][0]
                             audio_format = req_dl.get("ext", "opus")
                             audio_bitrate = req_dl.get("abr", 128) or 128
-                        
+
+                        upload_date_fallback = datetime.now(timezone.utc).date()
                         entry = SessionAudio(
                             video_id=info.get("id", ""),
                             title=info.get("title", ""),
                             parsed_date=None,
-                            upload_date=upload_date_obj or datetime.now(timezone.utc).date(),
+                            upload_date=upload_date_obj or upload_date_fallback,
                             duration_seconds=info.get("duration", 0) or 0,
                             audio_format=audio_format,
                             audio_bitrate_kbps=int(audio_bitrate),
@@ -242,7 +246,7 @@ class SessionDownloader:
                             notes="Skipped: file hash matches existing download",
                         )
                         self.catalogue.add_entry(entry)
-                        
+
                         return {
                             "status": "skipped_duplicate",
                             "url": video_url,

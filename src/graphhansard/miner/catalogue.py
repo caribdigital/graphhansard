@@ -113,8 +113,8 @@ class AudioCatalogue:
         if not file_hash:
             return False
         return any(
-            entry.file_hash_sha256 == file_hash 
-            for entry in self.entries 
+            entry.file_hash_sha256 == file_hash
+            for entry in self.entries
             if entry.status == DownloadStatus.DOWNLOADED
         )
 
