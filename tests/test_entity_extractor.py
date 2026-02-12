@@ -243,30 +243,52 @@ class TestMentionExtraction:
             ResolutionMethod.EXACT, ResolutionMethod.FUZZY
         )
 
-    def test_extract_skips_empty_segments(self, extractor):
-        """Skips segments with no text or no speaker."""
+    def test_extract_skips_empty_text(self, extractor):
+        """Skips segments with no text."""
         segment_no_text = {
             "text": "",
             "speaker_node_id": "mp_thompson_iram",
             "start_time": 10.0,
             "end_time": 15.0,
         }
-        segment_no_speaker = {
+
+        mentions = extractor._extract_from_segment(
+            segment_no_text, 0, "test_session", [segment_no_text], None
+        )
+
+        assert len(mentions) == 0
+
+    def test_extract_falls_back_to_speaker_label(self, extractor):
+        """Falls back to speaker_label when speaker_node_id is absent."""
+        segment = {
             "text": "The Prime Minister spoke.",
             "speaker_node_id": None,
+            "speaker_label": "SPEAKER_00",
             "start_time": 10.0,
             "end_time": 15.0,
         }
-        
-        mentions1 = extractor._extract_from_segment(
-            segment_no_text, 0, "test_session", [segment_no_text], None
+
+        mentions = extractor._extract_from_segment(
+            segment, 0, "test_session", [segment], None
         )
-        mentions2 = extractor._extract_from_segment(
-            segment_no_speaker, 0, "test_session", [segment_no_speaker], None
+
+        assert len(mentions) > 0
+        assert mentions[0].source_node_id == "SPEAKER_00"
+
+    def test_extract_falls_back_to_unknown(self, extractor):
+        """Falls back to UNKNOWN when both speaker fields are absent."""
+        segment = {
+            "text": "The Prime Minister spoke.",
+            "start_time": 10.0,
+            "end_time": 15.0,
+        }
+
+        mentions = extractor._extract_from_segment(
+            segment, 0, "test_session", [segment], None
         )
-        
-        assert len(mentions1) == 0
-        assert len(mentions2) == 0
+
+        assert len(mentions) > 0
+        assert mentions[0].source_node_id == "UNKNOWN"
 
 
 class TestFullTranscriptExtraction:

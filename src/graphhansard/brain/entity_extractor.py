@@ -86,7 +86,7 @@ class EntityExtractor:
     STOP_WORDS = [
         'said', 'spoke', 'mentioned', 'stated', 'asked', 'replied',
         'announced', 'presented', 'addressed', 'raised', 'discussed',
-        'opened', 'responded', 'and', 'or', 'but', 'thanked'
+        'opened', 'responded', 'or', 'but', 'thanked'
     ]
 
     def __init__(self, golden_record_path: str, use_spacy: bool = False):
@@ -184,12 +184,12 @@ class EntityExtractor:
             List of MentionRecord objects found in this segment
         """
         text = segment.get("text", "")
-        source_node_id = segment.get("speaker_node_id")
+        source_node_id = segment.get("speaker_node_id") or segment.get("speaker_label", "UNKNOWN")
         start_time = segment.get("start_time", 0.0)
         end_time = segment.get("end_time", 0.0)
-        
-        # Skip if no speaker identified or empty text
-        if not source_node_id or not text.strip():
+
+        # Skip if empty text
+        if not text.strip():
             return []
         
         mentions = []
