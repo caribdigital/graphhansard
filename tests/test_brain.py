@@ -478,19 +478,15 @@ class TestBahamianCreoleTranscription:
         t = Transcriber(device="cpu", normalize_creole=False)
         assert t.normalize_creole is False
 
-    def test_bc1_th_stopping_in_mock_transcription(self):
-        """BC-1: TH-stopped words are normalized in transcript text."""
-        # We can't test actual transcription without the models installed
-        # But we can test that the parameter is set correctly
-        t = Transcriber(device="cpu", normalize_creole=True)
-        assert t.normalize_creole is True
-
-    def test_bc2_vowel_shifts_in_mock_transcription(self):
-        """BC-2: Vowel shifts are normalized in transcript text."""
-        t = Transcriber(device="cpu", normalize_creole=True)
-        assert t.normalize_creole is True
-
-    def test_bc3_code_switching_support(self):
-        """BC-3: Transcriber supports code-switching via normalization."""
-        t = Transcriber(device="cpu", normalize_creole=True)
-        assert t.normalize_creole is True
+    def test_normalize_creole_flag_affects_transcription(self):
+        """BC-1, BC-2, BC-3: normalize_creole flag is properly stored.
+        
+        Note: Full integration test would require Whisper models to be installed.
+        The actual normalization logic is tested in test_creole_utils.py.
+        This test verifies the flag is properly stored for use in transcription.
+        """
+        t_enabled = Transcriber(device="cpu", normalize_creole=True)
+        t_disabled = Transcriber(device="cpu", normalize_creole=False)
+        
+        assert t_enabled.normalize_creole is True
+        assert t_disabled.normalize_creole is False

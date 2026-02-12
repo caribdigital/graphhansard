@@ -41,8 +41,8 @@ class AliasResolver:
     """
 
     def __init__(
-        self, 
-        golden_record_path: str, 
+        self,
+        golden_record_path: str,
         fuzzy_threshold: int = 85,
         normalize_creole: bool = True,
     ):

@@ -276,11 +276,11 @@ class TestEdgeCases:
         assert result == "the Membér"
 
     def test_whitespace_only(self):
-        """Whitespace-only string should return whitespace."""
+        """Whitespace-only string returns original."""
         result = normalize_th_stopping("   ")
-        # After splitting on whitespace, we'll get empty list, so result is ""
-        # This is acceptable behavior - whitespace-only input produces empty output
-        assert result == "   " or result == ""
+        # split() on whitespace-only returns [], join([]) returns ""
+        # But we return early for whitespace-only input
+        assert result == "   "
 
     def test_single_word(self):
         """Single word normalization."""
