@@ -34,6 +34,17 @@ class TranscriptSegment(BaseModel):
     confidence: float = Field(description="Average word-level confidence (0.0-1.0)")
     words: list[WordToken] = Field(default_factory=list)
 
+    # Audio quality metadata (BC-8, BC-9, BC-10)
+    quality_flag: str | None = Field(
+        default=None, description="Audio quality flag (ok, low_quality, hot_mic, etc.)"
+    )
+    snr_db: float | None = Field(
+        default=None, description="Signal-to-Noise Ratio in dB"
+    )
+    exclude_from_extraction: bool = Field(
+        default=False, description="Whether to exclude from entity extraction"
+    )
+
 
 class DiarizedTranscript(BaseModel):
     """Complete diarized transcript for a single session."""
@@ -61,10 +72,12 @@ class Transcriber:
         """Initialize the Transcriber.
 
         Args:
-            model_size: Whisper model size (tiny, base, small, medium, large-v2, large-v3)
+            model_size: Whisper model size
+                (tiny, base, small, medium, large-v2, large-v3)
             device: Device to run on ("cuda" or "cpu")
             compute_type: Computation precision ("float16", "int8", "float32")
-            backend: "faster-whisper" (CTranslate2) or "insanely-fast-whisper" (Flash Attention 2)
+            backend: "faster-whisper" (CTranslate2) or
+                "insanely-fast-whisper" (Flash Attention 2)
             normalize_creole: Whether to apply Bahamian Creole normalization (default: True)
         """
         self.model_size = model_size
@@ -76,12 +89,12 @@ class Transcriber:
 
     def _normalize_confidence(self, log_prob: float) -> float:
         """Convert log probability to confidence score in [0, 1] range.
-        
+
         Whisper's avg_logprob is typically in range [-inf, 0], where:
         - 0.0 = perfect confidence (prob=1.0)
         - -1.0 = ~0.37 confidence (prob=exp(-1))
         - -2.0 = ~0.14 confidence (prob=exp(-2))
-        
+
         We use exp(log_prob) bounded to [0, 1].
         """
         import math
@@ -102,7 +115,8 @@ class Transcriber:
                 from faster_whisper import WhisperModel
             except ImportError:
                 raise ImportError(
-                    "faster-whisper not installed. Install with: pip install faster-whisper"
+                    "faster-whisper not installed. "
+                    "Install with: pip install faster-whisper"
                 )
 
             self._model = WhisperModel(
@@ -127,7 +141,8 @@ class Transcriber:
             )
         else:
             raise ValueError(
-                f"Unknown backend: {self.backend}. Use 'faster-whisper' or 'insanely-fast-whisper'"
+                f"Unknown backend: {self.backend}. "
+                f"Use 'faster-whisper' or 'insanely-fast-whisper'"
             )
 
         return self._model
@@ -167,7 +182,8 @@ class Transcriber:
                     "start": segment.start,
                     "end": segment.end,
                     "text": segment_text,
-                    "confidence": self._normalize_confidence(segment.avg_logprob),  # Transform log prob to [0,1]
+                    # Transform log prob to [0,1]
+                    "confidence": self._normalize_confidence(segment.avg_logprob),
                     "words": [],
                 }
 

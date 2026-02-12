@@ -8,7 +8,19 @@ networks through four sequential stages:
 4. Graph Construction & Metric Computation
 
 Includes Bahamian Creole normalization utilities (BC-1, BC-2, BC-3).
+Includes audio quality analysis per BC-8, BC-9, BC-10 (SRD §11.3).
 """
+
+try:
+    from graphhansard.brain.audio_quality import (
+        AudioQualityAnalyzer,
+        AudioQualityFlag,
+        AudioQualityMetrics,
+    )
+except ImportError:
+    AudioQualityAnalyzer = None
+    AudioQualityFlag = None
+    AudioQualityMetrics = None
 
 from graphhansard.brain.creole_utils import (
     normalize_bahamian_creole,
@@ -32,6 +44,9 @@ __all__ = [
     "DiarizedTranscript",
     "TranscriptSegment",
     "WordToken",
+    "AudioQualityAnalyzer",
+    "AudioQualityFlag",
+    "AudioQualityMetrics",
     "normalize_bahamian_creole",
     "normalize_th_stopping",
     "normalize_vowel_shifts",
