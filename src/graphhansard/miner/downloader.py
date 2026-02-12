@@ -382,7 +382,7 @@ class SessionDownloader:
                                 )
                         else:
                             logger.info(
-                                f"Keeping duplicate file "
+                                "Keeping duplicate file "
                                 f"(delete_duplicates=False): {filepath}"
                             )
 

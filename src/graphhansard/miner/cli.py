@@ -41,7 +41,7 @@ def handle_scrape(args: argparse.Namespace) -> int:
         cookies_path=args.cookies,
         sleep_interval=5,
         max_downloads=50,
-        proxy_list_path=args.proxy_list if hasattr(args, 'proxy_list') else None,
+        proxy_list_path=args.proxy_list,
     )
 
     try:
