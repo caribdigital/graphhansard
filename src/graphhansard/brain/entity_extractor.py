@@ -100,11 +100,15 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
         "honourable_friend": re.compile(
-            r"my\s+hon(?:ourable|\.)?(?:\s+friend)?(?:\s+opposite)?",
+            r"my\s+hon(?:ourable|\.)?(?:\s+friend)",
+            re.IGNORECASE,
+        ),
+        "honourable_friend_opposite": re.compile(
+            r"my\s+hon(?:ourable|\.)?(?:\s+friend)?\s+opposite",
             re.IGNORECASE,
         ),
         "honourable_colleague": re.compile(
-            r"my\s+(?:hon(?:ourable|\.)?(?:\s+)?)?colleague(?:\s+opposite)?",
+            r"my\s+(?:hon(?:ourable|\.)?(?:\s+)?)?colleague",
             re.IGNORECASE,
         ),
         "previous_speaker": re.compile(
@@ -120,13 +124,14 @@ class EntityExtractor:
         'opened', 'responded', 'or', 'but', 'thanked'
     ]
 
-    def __init__(self, golden_record_path: str, use_spacy: bool = False, context_window_size: int = 3):
+    def __init__(self, golden_record_path: str, use_spacy: bool = False, context_window_size: int = 3, coreference_confidence: float = 0.8):
         """Initialize the EntityExtractor.
 
         Args:
             golden_record_path: Path to mps.json Golden Record file
             use_spacy: Whether to use spaCy NER (requires model installation)
             context_window_size: Number of previous speaker turns to consider for coreference (default: 3)
+            coreference_confidence: Base confidence score for coreference resolution (default: 0.8)
         """
         self.golden_record_path = Path(golden_record_path)
         self.resolver = AliasResolver(str(golden_record_path))
@@ -134,6 +139,7 @@ class EntityExtractor:
         self.nlp = None
         self.unresolved_mentions = []  # Track unresolved mentions
         self.context_window_size = context_window_size  # For anaphoric resolution
+        self.coreference_confidence = coreference_confidence  # Base confidence for coreference
         
         # Build MP lookup for party/context information
         self._mp_lookup = {
@@ -267,7 +273,8 @@ class EntityExtractor:
                 )
                 if target_node_id:
                     res_method = ResolutionMethod.COREFERENCE
-                    confidence = 0.8  # Default confidence for successful coreference
+                    # Use configurable confidence, could be adjusted based on resolution quality
+                    confidence = self.coreference_confidence
                 else:
                     res_method = ResolutionMethod.UNRESOLVED
                     confidence = 0.0
@@ -536,8 +543,13 @@ class EntityExtractor:
                     "node_id": speaker_id,
                     "segment_index": idx,
                     "text": segment.get("text", ""),
-                    "recency_score": (idx - start_idx + 1) / self.context_window_size,
                 })
+        
+        # Calculate recency scores based on actual history size
+        if history:
+            for i, entry in enumerate(history):
+                # Most recent speaker gets score of 1.0, oldest gets score closer to 0
+                entry["recency_score"] = (i + 1) / len(history)
         
         return history
 
@@ -571,13 +583,15 @@ class EntityExtractor:
         source_party = source_mp.party if source_mp else None
         
         # Determine filtering criteria based on mention type
+        # Handle "opposite" as the primary indicator since it overrides "friend"
         same_party_filter = None
-        if "my" in mention_lower and "friend" in mention_lower:
-            # "my honourable friend" typically refers to same party
-            same_party_filter = True
-        elif "opposite" in mention_lower:
-            # "opposite" typically refers to different party
+        if "opposite" in mention_lower:
+            # "opposite" always refers to different party, even if "friend" is present
+            # (e.g., "my honourable friend opposite" is a polite way to refer to opposition)
             same_party_filter = False
+        elif "my" in mention_lower and "friend" in mention_lower:
+            # "my honourable friend" (without "opposite") refers to same party
+            same_party_filter = True
         
         # Filter candidates based on party affiliation if applicable
         candidates = []

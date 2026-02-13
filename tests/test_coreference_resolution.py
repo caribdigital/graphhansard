@@ -392,11 +392,14 @@ class TestUnresolvedMentionLogging:
         assert "mentions" in log
         assert len(log["mentions"]) > 0
         
-        # Check first entry has required fields
+        # Check first entry has required fields and correct values
         entry = log["mentions"][0]
         assert "mention" in entry
+        assert "Member who just spoke" in entry["mention"]
         assert "mention_type" in entry
+        assert entry["mention_type"] == "deictic"
         assert "speaker_id" in entry
+        assert entry["speaker_id"] == "mp_davis_brave"
         assert "context" in entry
 
 
