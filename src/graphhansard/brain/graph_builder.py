@@ -546,6 +546,10 @@ class GraphBuilder:
             import networkx as nx
             import networkx.algorithms.community as nx_comm
 
+            # Early return for empty graphs
+            if graph.number_of_nodes() == 0:
+                return {}, 0.0
+
             # Convert to undirected for community detection
             undirected = graph.to_undirected()
 
@@ -562,7 +566,7 @@ class GraphBuilder:
             modularity = nx_comm.modularity(undirected, communities)
 
             return node_to_community, modularity
-        except (ImportError, AttributeError, nx.NetworkXError):
+        except (ImportError, AttributeError, nx.NetworkXException, ZeroDivisionError):
             # Fallback: assign all to community 0 if Louvain not available
             return {node: 0 for node in graph.nodes()}, 0.0
 
