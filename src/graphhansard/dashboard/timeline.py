@@ -301,5 +301,5 @@ def load_session_data(session: SessionInfo) -> dict | None:
             # For GraphML files, would need to parse with NetworkX
             return None
     
-    except (FileNotFoundError, json.JSONDecodeError, Exception):
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None

@@ -187,8 +187,6 @@ def main():
         return
     
     # === VIEW MODE: GRAPH EXPLORER (default with leaderboard) ===
-    
-    # === VIEW MODE: GRAPH EXPLORER (default with leaderboard) ===
     if graph_type == "Sample Session":
         session_graph = load_sample_graph()
         
