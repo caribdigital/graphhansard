@@ -17,6 +17,11 @@ from graphhansard.brain.graph_builder import SessionGraph
 from graphhansard.dashboard.graph_viz import build_force_directed_graph
 
 
+# Configuration constants
+FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
+GOLDEN_RECORD_PATH = "golden_record/mps.json"  # Relative to project root
+
+
 def load_sample_graph() -> SessionGraph | None:
     """Load sample session graph if available."""
     sample_path = Path("output/sample_session_metrics.json")
@@ -29,7 +34,7 @@ def load_sample_graph() -> SessionGraph | None:
 
 def load_golden_record() -> dict:
     """Load Golden Record for MP search and alias resolution."""
-    golden_record_path = Path("golden_record/mps.json")
+    golden_record_path = Path(GOLDEN_RECORD_PATH)
     if golden_record_path.exists():
         with open(golden_record_path, "r") as f:
             return json.load(f)
@@ -127,25 +132,25 @@ def search_mp(query: str, golden_record: dict, session_graph: SessionGraph) -> l
         
         # Check common name
         common_name = mp.get("common_name", "")
-        if fuzz.partial_ratio(query_lower, common_name.lower()) >= 75:
+        if fuzz.partial_ratio(query_lower, common_name.lower()) >= FUZZY_MATCH_THRESHOLD:
             matches.append(node_id)
             continue
         
         # Check full name
         full_name = mp.get("full_name", "")
-        if fuzz.partial_ratio(query_lower, full_name.lower()) >= 75:
+        if fuzz.partial_ratio(query_lower, full_name.lower()) >= FUZZY_MATCH_THRESHOLD:
             matches.append(node_id)
             continue
         
         # Check aliases
         for alias in mp.get("aliases", []):
-            if fuzz.partial_ratio(query_lower, alias.lower()) >= 75:
+            if fuzz.partial_ratio(query_lower, alias.lower()) >= FUZZY_MATCH_THRESHOLD:
                 matches.append(node_id)
                 break
         
         # Check constituency
         constituency = mp.get("constituency", "")
-        if fuzz.partial_ratio(query_lower, constituency.lower()) >= 75:
+        if fuzz.partial_ratio(query_lower, constituency.lower()) >= FUZZY_MATCH_THRESHOLD:
             matches.append(node_id)
     
     return list(set(matches))  # Remove duplicates

@@ -33,6 +33,13 @@ EDGE_COLOR_POSITIVE = "#00FF00"  # Green
 EDGE_COLOR_NEUTRAL = "#808080"  # Grey
 EDGE_COLOR_NEGATIVE = "#FF0000"  # Red
 
+# Node highlighting (MP-9)
+HIGHLIGHT_BORDER_COLOR = "#FFFF00"  # Yellow border for highlighted nodes
+HIGHLIGHT_BORDER_WIDTH = 5
+HIGHLIGHT_SIZE_MULTIPLIER = 1.2  # Enlarge highlighted nodes by 20%
+DIMMED_NODE_OPACITY = 0.3
+DIMMED_EDGE_OPACITY = 0.2
+
 
 def get_sentiment_color(net_sentiment: float) -> str:
     """Map net sentiment to edge color per MP-4.
@@ -221,12 +228,12 @@ def build_force_directed_graph(
         if highlight_set:
             if node.node_id in highlight_set:
                 # Highlighted node: larger border and full opacity
-                border_width = 5
-                border_color = "#FFFF00"  # Yellow border for highlight
-                size = size * 1.2  # Make highlighted nodes slightly larger
+                border_width = HIGHLIGHT_BORDER_WIDTH
+                border_color = HIGHLIGHT_BORDER_COLOR
+                size = size * HIGHLIGHT_SIZE_MULTIPLIER
             else:
                 # Non-matching nodes: reduce opacity to dim them
-                opacity = 0.3
+                opacity = DIMMED_NODE_OPACITY
         
         # Build tooltip with node info
         tooltip = f"""
@@ -281,7 +288,7 @@ def build_force_directed_graph(
         edge_opacity = 1.0
         if highlight_set:
             if edge.source_node_id not in highlight_set and edge.target_node_id not in highlight_set:
-                edge_opacity = 0.2
+                edge_opacity = DIMMED_EDGE_OPACITY
         
         # Build tooltip
         tooltip = f"""
