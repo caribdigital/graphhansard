@@ -97,6 +97,7 @@ def build_force_directed_graph(
     max_edge_width: float = 10.0,
     height: str = "750px",
     width: str = "100%",
+    highlight_nodes: list[str] | None = None,
 ) -> Network:
     """Build interactive force-directed graph using PyVis.
     
@@ -105,6 +106,8 @@ def build_force_directed_graph(
     - MP-2: Party-based color coding (PLP=gold, FNM=red/blue, COI=grey)
     - MP-3: Node size by selectable metric
     - MP-4: Edge thickness by mention count, color by sentiment
+    
+    Implements MP-9: Search and highlight functionality
     
     Args:
         session_graph: SessionGraph with nodes and edges
@@ -117,6 +120,7 @@ def build_force_directed_graph(
         max_edge_width: Maximum edge width
         height: Graph height (CSS format)
         width: Graph width (CSS format)
+        highlight_nodes: Optional list of node_ids to highlight (MP-9)
         
     Returns:
         PyVis Network object ready to render
@@ -201,10 +205,28 @@ def build_force_directed_graph(
     # Normalize to node size range
     node_sizes = normalize_metric(metric_values, min_node_size, max_node_size)
     
+    # Determine which nodes to highlight (MP-9)
+    highlight_set = set(highlight_nodes) if highlight_nodes else set()
+    
     # Add nodes with party colors and metric-based sizing (MP-2, MP-3)
     for idx, node in enumerate(session_graph.nodes):
         color = colors.get(node.party, colors["Unknown"])
         size = node_sizes[idx]
+        
+        # Apply highlighting/dimming for search (MP-9)
+        opacity = 1.0
+        border_width = 1
+        border_color = color
+        
+        if highlight_set:
+            if node.node_id in highlight_set:
+                # Highlighted node: larger border and full opacity
+                border_width = 5
+                border_color = "#FFFF00"  # Yellow border for highlight
+                size = size * 1.2  # Make highlighted nodes slightly larger
+            else:
+                # Non-matching nodes: reduce opacity to dim them
+                opacity = 0.3
         
         # Build tooltip with node info
         tooltip = f"""
@@ -220,8 +242,13 @@ def build_force_directed_graph(
             node.node_id,
             label=node.common_name,
             title=tooltip.strip(),
-            color=color,
+            color={
+                "background": color,
+                "border": border_color,
+            },
+            borderWidth=border_width,
             size=size,
+            opacity=opacity,
         )
     
     # Extract edge weights for normalization (MP-4)
@@ -250,6 +277,12 @@ def build_force_directed_graph(
         # Width by mention count
         width = edge_widths[idx] if idx < len(edge_widths) else min_edge_width
         
+        # Dim edges if search is active and neither endpoint is highlighted (MP-9)
+        edge_opacity = 1.0
+        if highlight_set:
+            if edge.source_node_id not in highlight_set and edge.target_node_id not in highlight_set:
+                edge_opacity = 0.2
+        
         # Build tooltip
         tooltip = f"""
         <b>{edge.source_node_id} → {edge.target_node_id}</b><br>
@@ -262,7 +295,10 @@ def build_force_directed_graph(
             edge.source_node_id,
             edge.target_node_id,
             title=tooltip.strip(),
-            color=edge_color,
+            color={
+                "color": edge_color,
+                "opacity": edge_opacity,
+            },
             width=width,
             value=edge.total_mentions,  # For automatic scaling
         )
