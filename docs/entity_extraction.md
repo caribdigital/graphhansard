@@ -23,6 +23,18 @@ The `EntityExtractor` class implements Stage 2 of the GraphHansard pipeline (SRD
   - **Precision: 100%** (target: ≥80%)
   - **Recall: 98.2%** (target: ≥85%)
   - **F1 Score: 99.1%**
+- **BR-11**: Coreference resolution for anaphoric references ✅
+  - "the Member who just spoke" → resolves using speaker turn context
+  - "the honourable gentleman opposite" → uses party affiliation filtering
+  - "my honourable friend" → resolves to same-party members
+  - "the previous speaker" → resolves to most recent speaker
+- **BR-14**: Unresolved mention logging ✅
+  - All unresolved mentions logged with full context
+  - Includes mention type classification (deictic vs standard)
+  - Structured format for Golden Record expansion
+- **BR-15**: Self-reference detection ✅
+  - Detects when MPs refer to themselves
+  - Flags self-references to exclude from interaction graph
 
 ### 🔄 Optional (v1.0)
 
@@ -32,10 +44,6 @@ The `EntityExtractor` class implements Stage 2 of the GraphHansard pipeline (SRD
 
 ### 📋 Planned (v1.1)
 
-- **BR-11**: Coreference resolution for anaphoric references
-  - "the gentleman who just spoke"
-  - "the Member opposite"
-  - "my colleague"
 - **LLM fallback**: Local Mistral 7B via Ollama for ambiguous cases
 
 ## Usage
@@ -109,12 +117,13 @@ Each extracted mention produces a `MentionRecord` with:
     "source_node_id": str,          # MP who spoke (the speaker)
     "target_node_id": str | None,   # MP who was mentioned (resolved)
     "raw_mention": str,             # Exact text as transcribed
-    "resolution_method": enum,      # "exact" | "fuzzy" | "unresolved"
+    "resolution_method": enum,      # "exact" | "fuzzy" | "coreference" | "unresolved"
     "resolution_score": float,      # Confidence 0.0-1.0
     "timestamp_start": float,       # Mention start time in seconds
     "timestamp_end": float,         # Mention end time in seconds
     "context_window": str,          # ±1 sentence context
     "segment_index": int,           # Segment number in transcript
+    "is_self_reference": bool,      # True if speaker refers to themselves (BR-15)
 }
 ```
 
@@ -124,11 +133,14 @@ Each extracted mention produces a `MentionRecord` with:
 |--------|-------------|------------|
 | `exact` | Direct match in alias index | 1.0 |
 | `fuzzy` | RapidFuzz match ≥85% | 0.85-0.99 |
+| `coreference` | Context-based deictic resolution (BR-11) | 0.8 |
 | `unresolved` | No match found | 0.0 |
 
 ## Pattern Matching
 
-The extractor uses 6 regex patterns to detect parliamentary references:
+The extractor uses 6 regex patterns to detect parliamentary references and 5 patterns for deictic/anaphoric references (BR-11):
+
+### Standard Parliamentary Patterns
 
 ### 1. Member for [Constituency]
 
@@ -177,6 +189,58 @@ The extractor uses 6 regex patterns to detect parliamentary references:
 **Examples:**
 - "The Attorney General"
 - "Attorney General"
+
+### Deictic/Anaphoric Reference Patterns (BR-11)
+
+### 7. Member Who Spoke
+
+**Pattern:** `(?:the\s+)?(?:Member|gentleman|lady)\s+who\s+(?:just\s+)?(?:spoke|addressed|mentioned)`
+
+**Examples:**
+- "the Member who just spoke"
+- "the gentleman who spoke"
+
+**Resolution:** Resolves to most recent speaker in context window
+
+### 8. Member Opposite
+
+**Pattern:** `(?:the\s+)?(?:hon(?:ourable|\.)?|honourable)?\s*(?:Member|gentleman|lady)\s+opposite`
+
+**Examples:**
+- "the Member opposite"
+- "the honourable gentleman opposite"
+
+**Resolution:** Filters by party affiliation (opposite party from speaker)
+
+### 9. My Honourable Friend
+
+**Pattern:** `my\s+hon(?:ourable|\.)?(?:\s+friend)?(?:\s+opposite)?`
+
+**Examples:**
+- "my honourable friend"
+- "my hon. friend"
+
+**Resolution:** Filters by party affiliation (same party as speaker)
+
+### 10. My Colleague
+
+**Pattern:** `my\s+(?:hon(?:ourable|\.)?(?:\s+)?)?colleague(?:\s+opposite)?`
+
+**Examples:**
+- "my colleague"
+- "my honourable colleague"
+
+**Resolution:** Uses recency scoring with optional party filtering
+
+### 11. Previous Speaker
+
+**Pattern:** `the\s+(?:previous|last)\s+speaker`
+
+**Examples:**
+- "the previous speaker"
+- "the last speaker"
+
+**Resolution:** Resolves to most recent speaker in context window
 
 ## Validation Results
 
@@ -230,50 +294,58 @@ python scripts/example_entity_extractor.py
 ```
 Transcript Segment
        │
-       ├─► Pattern Matching ──► Raw Mentions
+       ├─► Pattern Matching ──► Raw Mentions (standard + deictic)
        │
        ├─► spaCy NER (optional) ──► PERSON Entities
        │
        └─► Deduplicate ──► Unique Mentions
                 │
-                ├─► Golden Record Resolver ──► Resolved Node IDs
+                ├─► Check if Deictic Reference (BR-11)
+                │        │
+                │        ├─► Yes: Build Speaker History
+                │        │        └─► Resolve via Coreference (party filtering, recency)
+                │        │
+                │        └─► No: Golden Record Resolver
+                │
+                ├─► Check Self-Reference (BR-15)
                 │
                 ├─► Context Extraction ──► ±1 Sentence
                 │
                 └─► Timestamp Estimation ──► Mention Timing
                          │
-                         └─► MentionRecord Output
+                         └─► MentionRecord Output (with is_self_reference flag)
 ```
 
 ### Integration Points
 
 - **Input:** `DiarizedTranscript` from `brain.transcriber`
 - **Resolution:** `AliasResolver` from `golden_record.resolver`
+- **Coreference:** Speaker history tracking with party-based filtering
 - **Output:** List of `MentionRecord` for graph construction
 
 ## Limitations & Future Work
 
 ### Current Limitations
 
-1. **Anaphoric References:** Not resolved (e.g., "the gentleman opposite")
-   - Logged as unresolved, flagged for human review
-   - Future: Implement coreference resolution (BR-11)
-
-2. **Direct Name Mentions:** Limited without spaCy
+1. **Direct Name Mentions:** Limited without spaCy
    - Pattern matching focuses on parliamentary titles
    - Nicknames and full names rely on Golden Record resolution
    - Future: Enable spaCy NER by default
 
-3. **Cross-Segment Context:** Context limited to current segment
+2. **Cross-Segment Context:** Context limited to current segment
    - Future: Extend context window across segment boundaries
+
+3. **Coreference Complexity:** Current implementation uses heuristics
+   - Party-based filtering and recency scoring
+   - Does not handle pronouns (he/she/they)
+   - May struggle with ambiguous references
 
 ### Planned Enhancements (v1.1)
 
-- **Coreference Resolution** (BR-11)
-  - Track speaker turn history
+- **Pronoun Resolution**
   - Resolve "he/she/they" references
-  - Handle "the Member opposite" contextually
-
+  - Track gender information from Golden Record
+  
 - **LLM Fallback**
   - Local Mistral 7B via Ollama
   - Ambiguous case resolution
