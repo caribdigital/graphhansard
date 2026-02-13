@@ -154,6 +154,85 @@ def normalize_bahamian_creole(text: str, apply_th_stopping: bool = True,
     return normalized
 
 
+def strip_honorific_prefix(text: str) -> str:
+    """Strip "Honourable" prefix variants from text (BC-7).
+    
+    Implements BC-7 requirement: Handle "The Honourable", "the Hon.",
+    "the honourable member", "my honourable friend" as prefix noise.
+    
+    When stripping "the honourable member", we preserve "Member" if followed by "for"
+    (constituency reference), but remove it in other contexts.
+    
+    Args:
+        text: Input text that may contain honorific prefixes
+        
+    Returns:
+        Text with honorific prefixes removed
+        
+    Examples:
+        >>> strip_honorific_prefix("The Honourable Member for Fox Hill")
+        'Member for Fox Hill'
+        >>> strip_honorific_prefix("the Hon. Fred Mitchell")
+        'Fred Mitchell'
+        >>> strip_honorific_prefix("my honourable friend from Cat Island")
+        'from Cat Island'
+    """
+    if not text or not text.strip():
+        return text
+    
+    # Honorific prefix patterns to strip (BC-7)
+    # Match at the beginning of the string (case-insensitive)
+    # Patterns ordered from most specific to least specific
+    honorific_patterns = [
+        # "the honourable member for" -> keep "Member for"
+        (r"^(?:The\s+)?honourable\s+(?=member\s+for)", ""),
+        # "the honourable member/gentleman/lady" (not followed by "for") -> remove all
+        (r"^(?:The\s+)?honourable\s+(?:member|gentleman|lady)\s+", ""),
+        # "my honourable friend/member/colleague" -> remove all
+        (r"^(?:My\s+)?honourable\s+(?:friend|member|colleague)\s+", ""),
+        # "The Honourable" or "the honourable" 
+        (r"^(?:The\s+)?Honourable\s+", ""),
+        # "The Hon." or "Hon."
+        (r"^(?:The\s+)?Hon\.?\s+", ""),
+    ]
+    
+    stripped = text.strip()
+    for pattern, replacement in honorific_patterns:
+        stripped = re.sub(pattern, replacement, stripped, flags=re.IGNORECASE)
+    
+    return stripped.strip()
+
+
+def normalize_mention_for_resolution(text: str) -> str:
+    """Full normalization pipeline for MP mention resolution (BC-1, BC-2, BC-7).
+    
+    Combines Bahamian Creole normalization and honorific stripping to prepare
+    text for alias resolution.
+    
+    Args:
+        text: Raw mention text from transcript
+        
+    Returns:
+        Normalized text ready for alias resolution
+        
+    Examples:
+        >>> normalize_mention_for_resolution("da Honourable Memba for Englaston")
+        'the Member for Englerston'
+        >>> normalize_mention_for_resolution("The Hon. Fred Mitchell")
+        'Fred Mitchell'
+    """
+    if not text:
+        return text
+    
+    # First: Apply Bahamian Creole normalization (TH-stopping, vowel shifts)
+    normalized = normalize_bahamian_creole(text)
+    
+    # Second: Strip honorific prefixes
+    normalized = strip_honorific_prefix(normalized)
+    
+    return normalized
+
+
 def get_th_stopped_variants(text: str) -> list[str]:
     """Generate TH-stopped variants of a phrase for fuzzy matching.
     
