@@ -124,13 +124,11 @@ def display_mention_details(
     st.markdown(f"### {source_name} → {target_name}")
     
     # Summary metrics
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         st.metric("Total Mentions", edge.total_mentions)
     with col2:
         st.metric("Net Sentiment", f"{edge.net_sentiment:+.2f}")
-    with col3:
-        st.markdown(f"**Breakdown**")
     
     # Sentiment breakdown
     st.markdown(f"🟢 Positive: {edge.positive_count} | "
