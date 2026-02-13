@@ -39,6 +39,10 @@ class MentionRecord(BaseModel):
     timestamp_end: float
     context_window: str = Field(description="Surrounding text for verification")
     segment_index: int
+    is_self_reference: bool = Field(
+        default=False, 
+        description="True if speaker refers to themselves (BR-15)"
+    )
 
 
 class EntityExtractor:
@@ -85,6 +89,34 @@ class EntityExtractor:
         ),
     }
     
+    # Deictic/Anaphoric reference patterns (BR-11)
+    DEICTIC_PATTERNS = {
+        "member_who_spoke": re.compile(
+            r"(?:the\s+)?(?:Member|gentleman|lady)\s+who\s+(?:just\s+)?(?:spoke|addressed|mentioned)",
+            re.IGNORECASE,
+        ),
+        "member_opposite": re.compile(
+            r"(?:the\s+)?(?:hon(?:ourable|\.)?\s+)?(?:Member|gentleman|lady)\s+opposite",
+            re.IGNORECASE,
+        ),
+        "honourable_friend": re.compile(
+            r"my\s+hon(?:ourable|\.)?(?:\s+friend)",
+            re.IGNORECASE,
+        ),
+        "honourable_friend_opposite": re.compile(
+            r"my\s+hon(?:ourable|\.)?(?:\s+friend)?\s+opposite",
+            re.IGNORECASE,
+        ),
+        "honourable_colleague": re.compile(
+            r"my\s+(?:hon(?:ourable|\.)?\s+)?colleague",
+            re.IGNORECASE,
+        ),
+        "previous_speaker": re.compile(
+            r"the\s+(?:previous|last)\s+speaker",
+            re.IGNORECASE,
+        ),
+    }
+    
     # Stop words that typically follow mentions (not part of the title)
     STOP_WORDS = [
         'said', 'spoke', 'mentioned', 'stated', 'asked', 'replied',
@@ -92,18 +124,27 @@ class EntityExtractor:
         'opened', 'responded', 'or', 'but', 'thanked'
     ]
 
-    def __init__(self, golden_record_path: str, use_spacy: bool = False):
+    def __init__(self, golden_record_path: str, use_spacy: bool = False, context_window_size: int = 3, coreference_confidence: float = 0.8):
         """Initialize the EntityExtractor.
 
         Args:
             golden_record_path: Path to mps.json Golden Record file
             use_spacy: Whether to use spaCy NER (requires model installation)
+            context_window_size: Number of previous speaker turns to consider for coreference (default: 3)
+            coreference_confidence: Base confidence score for coreference resolution (default: 0.8)
         """
         self.golden_record_path = Path(golden_record_path)
         self.resolver = AliasResolver(str(golden_record_path))
         self.use_spacy = use_spacy
         self.nlp = None
         self.unresolved_mentions = []  # Track unresolved mentions
+        self.context_window_size = context_window_size  # For anaphoric resolution
+        self.coreference_confidence = coreference_confidence  # Base confidence for coreference
+        
+        # Build MP lookup for party/context information
+        self._mp_lookup = {
+            mp.node_id: mp for mp in self.resolver.golden_record.mps
+        }
 
         # Initialize spaCy if requested
         if use_spacy:
@@ -213,16 +254,46 @@ class EntityExtractor:
 
         # Resolve each mention and create MentionRecord
         for raw_mention, char_start, char_end in all_raw_mentions:
-            # Resolve via Golden Record (BR-10)
-            resolution = self.resolver.resolve(raw_mention, debate_date)
-
-            # Determine resolution method based on resolver output
-            if resolution.method == "exact":
-                res_method = ResolutionMethod.EXACT
-            elif resolution.method == "fuzzy":
-                res_method = ResolutionMethod.FUZZY
+            # Check if this is a deictic/anaphoric reference (BR-11)
+            is_deictic = self._is_deictic_reference(raw_mention)
+            
+            # Build speaker history for coreference resolution
+            speaker_history = self._build_speaker_history(segment_index, all_segments)
+            
+            # Initialize resolution
+            resolution = None
+            target_node_id = None
+            res_method = ResolutionMethod.UNRESOLVED
+            confidence = 0.0
+            
+            if is_deictic:
+                # Attempt coreference resolution (BR-11)
+                target_node_id = self._resolve_coreference(
+                    raw_mention, source_node_id, speaker_history, debate_date
+                )
+                if target_node_id:
+                    res_method = ResolutionMethod.COREFERENCE
+                    # Use configurable confidence, could be adjusted based on resolution quality
+                    confidence = self.coreference_confidence
+                else:
+                    res_method = ResolutionMethod.UNRESOLVED
+                    confidence = 0.0
             else:
-                res_method = ResolutionMethod.UNRESOLVED
+                # Resolve via Golden Record (BR-10)
+                resolution = self.resolver.resolve(raw_mention, debate_date)
+                target_node_id = resolution.node_id
+                confidence = resolution.confidence
+                
+                # Determine resolution method based on resolver output
+                if resolution.method == "exact":
+                    res_method = ResolutionMethod.EXACT
+                elif resolution.method == "fuzzy":
+                    res_method = ResolutionMethod.FUZZY
+                else:
+                    res_method = ResolutionMethod.UNRESOLVED
+            
+            # Check for self-reference (BR-15)
+            is_self_reference = (target_node_id == source_node_id) if target_node_id else False
 
             # Extract context window (±1 sentence) (BR-12)
             context = self._extract_context_window(
@@ -237,22 +308,25 @@ class EntityExtractor:
             mention_record = MentionRecord(
                 session_id=session_id,
                 source_node_id=source_node_id,
-                target_node_id=resolution.node_id,
+                target_node_id=target_node_id,
                 raw_mention=raw_mention,
                 resolution_method=res_method,
-                resolution_score=resolution.confidence,
+                resolution_score=confidence,
                 timestamp_start=mention_start,
                 timestamp_end=mention_end,
                 context_window=context,
                 segment_index=segment_index,
+                is_self_reference=is_self_reference,
             )
 
             mentions.append(mention_record)
 
-            # Log unresolved mentions for human review (BR-12)
-            if resolution.node_id is None:
+            # Log unresolved mentions for human review (BR-14)
+            if target_node_id is None:
+                mention_type = "deictic" if is_deictic else "standard"
                 self._log_unresolved_mention(
-                    raw_mention, session_id, segment_index, debate_date, context
+                    raw_mention, session_id, segment_index, debate_date, context,
+                    mention_type=mention_type, speaker_id=source_node_id
                 )
 
         return mentions
@@ -260,14 +334,29 @@ class EntityExtractor:
     def _extract_pattern_mentions(self, text: str) -> list[tuple[str, int, int]]:
         """Extract mentions using regex patterns.
 
+        Deictic patterns (BR-11) are processed first and take priority
+        over standard patterns to prevent greedy capture pollution.
+
         Returns:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
 
+        # Phase 1: Extract deictic/anaphoric patterns first (BR-11) — they take priority
+        deictic_ranges = []
+        for pattern_name, pattern in self.DEICTIC_PATTERNS.items():
+            for match in pattern.finditer(text):
+                mention_text = match.group(0).strip()
+                char_start = match.start()
+                char_end = match.end()
+
+                if len(mention_text) >= 5:
+                    mentions.append((mention_text, char_start, char_end))
+                    deictic_ranges.append((char_start, char_end))
+
+        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps
         for pattern_name, pattern in self.PATTERNS.items():
             for match in pattern.finditer(text):
-                # Get the full match as the mention
                 mention_text = match.group(0).strip()
                 char_start = match.start()
 
@@ -282,6 +371,14 @@ class EntityExtractor:
 
                 mention_text = ' '.join(cleaned_words).strip()
                 char_end = char_start + len(mention_text)
+
+                # Skip if overlaps with a deictic match
+                overlaps_deictic = any(
+                    not (char_end <= d_start or char_start >= d_end)
+                    for d_start, d_end in deictic_ranges
+                )
+                if overlaps_deictic:
+                    continue
 
                 # Only add if mention is substantial (at least 5 chars)
                 if len(mention_text) >= 5:
@@ -417,13 +514,131 @@ class EntityExtractor:
 
         return mention_start, mention_end
 
+    def _is_deictic_reference(self, mention: str) -> bool:
+        """Check if a mention is a deictic/anaphoric reference.
+        
+        Args:
+            mention: The raw mention text
+            
+        Returns:
+            True if the mention matches a deictic pattern
+        """
+        for pattern_name, pattern in self.DEICTIC_PATTERNS.items():
+            if pattern.search(mention):
+                return True
+        return False
+
+    def _build_speaker_history(
+        self, current_segment_index: int, all_segments: list[dict]
+    ) -> list[dict]:
+        """Build a history of recent speakers for coreference resolution.
+        
+        Args:
+            current_segment_index: Index of current segment
+            all_segments: All transcript segments
+            
+        Returns:
+            List of speaker information from previous N segments
+        """
+        history = []
+        start_idx = max(0, current_segment_index - self.context_window_size)
+        
+        for idx in range(start_idx, current_segment_index):
+            segment = all_segments[idx]
+            speaker_id = segment.get("speaker_node_id") or segment.get("speaker_label")
+            
+            if speaker_id and speaker_id != "UNKNOWN":
+                history.append({
+                    "node_id": speaker_id,
+                    "segment_index": idx,
+                    "text": segment.get("text", ""),
+                })
+        
+        return history
+
+    def _resolve_coreference(
+        self, mention: str, source_node_id: str, speaker_history: list[dict], 
+        debate_date: str | None
+    ) -> str | None:
+        """Resolve deictic/anaphoric references using speaker turn context (BR-11).
+        
+        Implements context-window heuristic:
+        - "the Member who just spoke" → examine previous N speaker turns, score by recency
+        - "the honourable gentleman opposite" → use party/seating context to narrow candidates
+        - "my honourable friend" → typically same-party; use party affiliation of speaker
+        
+        Args:
+            mention: The anaphoric mention (e.g., "the gentleman who just spoke")
+            source_node_id: The speaker making the reference
+            speaker_history: Recent speaker turns for context
+            debate_date: Optional debate date for temporal context
+            
+        Returns:
+            Resolved node_id or None if unresolvable
+        """
+        if not speaker_history:
+            return None
+        
+        mention_lower = mention.lower()
+        
+        # Get source MP info for party-based filtering
+        source_mp = self._mp_lookup.get(source_node_id)
+        source_party = source_mp.party if source_mp else None
+        
+        # Determine filtering criteria based on mention type
+        # Handle "opposite" as the primary indicator since it overrides "friend"
+        same_party_filter = None
+        if "opposite" in mention_lower:
+            # "opposite" always refers to different party, even if "friend" is present
+            # (e.g., "my honourable friend opposite" is a polite way to refer to opposition)
+            same_party_filter = False
+        elif "my" in mention_lower and "friend" in mention_lower:
+            # "my honourable friend" (without "opposite") refers to same party
+            same_party_filter = True
+        
+        # Filter candidates based on party affiliation if applicable
+        candidates = []
+        for speaker in speaker_history:
+            speaker_node_id = speaker["node_id"]
+            
+            # Skip if it's the source speaker (self-reference check)
+            if speaker_node_id == source_node_id:
+                continue
+            
+            # Apply party filter if applicable
+            if same_party_filter is not None and source_party:
+                speaker_mp = self._mp_lookup.get(speaker_node_id)
+                if speaker_mp:
+                    speaker_party = speaker_mp.party
+                    if same_party_filter and speaker_party != source_party:
+                        continue
+                    elif not same_party_filter and speaker_party == source_party:
+                        continue
+            
+            candidates.append(speaker)
+        
+        if not candidates:
+            return None
+        
+        # Score candidates by recency (most recent speaker gets highest score)
+        # For "who just spoke" or "previous speaker", strongly prefer most recent
+        if "just spoke" in mention_lower or "who spoke" in mention_lower or "previous speaker" in mention_lower:
+            # Return the most recent speaker (highest segment index)
+            most_recent = max(candidates, key=lambda x: x["segment_index"])
+            return most_recent["node_id"]
+        
+        # For other deictic references, return most recent candidate
+        # Return the most recent candidate
+        candidates.sort(key=lambda x: x["segment_index"], reverse=True)
+        return candidates[0]["node_id"]
+
     def resolve_coreference(
         self, mention: str, speaker_history: list[dict]
     ) -> str | None:
         """Resolve anaphoric/deictic references using speaker turn context.
-
-        This is a placeholder for future coreference resolution (BR-11).
-        For v1.0, anaphoric references will be logged as unresolved.
+        
+        DEPRECATED: Use _resolve_coreference instead.
+        This method is kept for backwards compatibility.
 
         Args:
             mention: The anaphoric mention (e.g., "the gentleman who just spoke")
@@ -432,15 +647,15 @@ class EntityExtractor:
         Returns:
             Resolved node_id or None if unresolvable
         """
-        # TODO: Implement coreference resolution in future version
-        # For now, return None (will be logged as unresolved)
-        return None
+        # Delegate to the new implementation with minimal parameters
+        return self._resolve_coreference(mention, "UNKNOWN", speaker_history, None)
 
     def _log_unresolved_mention(
         self, mention: str, session_id: str, segment_index: int,
-        debate_date: str | None, context: str
+        debate_date: str | None, context: str, mention_type: str = "standard",
+        speaker_id: str | None = None
     ) -> None:
-        """Log an unresolved mention for human review.
+        """Log an unresolved mention for human review (BR-14).
 
         Args:
             mention: The raw mention that could not be resolved
@@ -448,6 +663,8 @@ class EntityExtractor:
             segment_index: Segment number where mention occurred
             debate_date: Optional debate date
             context: Context window around the mention
+            mention_type: Type of mention (e.g., "deictic", "standard")
+            speaker_id: Node ID of the speaker making the mention
         """
         from datetime import datetime, timezone
         
@@ -457,6 +674,8 @@ class EntityExtractor:
             "segment_index": segment_index,
             "debate_date": debate_date,
             "context": context,
+            "mention_type": mention_type,
+            "speaker_id": speaker_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
