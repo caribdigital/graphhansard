@@ -211,7 +211,8 @@ class TestPartyColors:
         # Find PLP nodes
         plp_nodes = [n for n in net.nodes if n["id"] in ["mp_davis_brave", "mp_cooper_chester"]]
         assert len(plp_nodes) == 2
-        assert all(n["color"] == PARTY_COLORS["PLP"] for n in plp_nodes)
+        # Color is now a dict with background and border
+        assert all(n["color"]["background"] == PARTY_COLORS["PLP"] for n in plp_nodes)
     
     def test_fnm_color_red(self, sample_session_graph):
         """FNM nodes should be red by default."""
@@ -219,8 +220,8 @@ class TestPartyColors:
         
         # Find FNM node
         fnm_node = next(n for n in net.nodes if n["id"] == "mp_pintard_michael")
-        assert fnm_node["color"] == PARTY_COLORS["FNM"]  # Red
-        assert fnm_node["color"] == "#DC143C"
+        assert fnm_node["color"]["background"] == PARTY_COLORS["FNM"]  # Red
+        assert fnm_node["color"]["background"] == "#DC143C"
     
     def test_fnm_color_blue(self, sample_session_graph):
         """FNM nodes should be blue when toggled."""
@@ -228,7 +229,7 @@ class TestPartyColors:
         
         # Find FNM node
         fnm_node = next(n for n in net.nodes if n["id"] == "mp_pintard_michael")
-        assert fnm_node["color"] == "#1E90FF"  # Blue
+        assert fnm_node["color"]["background"] == "#1E90FF"  # Blue
     
     def test_coi_color(self, sample_session_graph):
         """COI nodes should be grey."""
@@ -236,7 +237,7 @@ class TestPartyColors:
         
         # Find COI node
         coi_node = next(n for n in net.nodes if n["id"] == "mp_gray_khaalis")
-        assert coi_node["color"] == PARTY_COLORS["COI"]  # Grey
+        assert coi_node["color"]["background"] == PARTY_COLORS["COI"]  # Grey
     
     def test_custom_colors(self, sample_session_graph):
         """Should accept custom party colors."""
@@ -248,7 +249,7 @@ class TestPartyColors:
         net = build_force_directed_graph(sample_session_graph, party_colors=custom_colors)
         
         plp_node = next(n for n in net.nodes if n["id"] == "mp_davis_brave")
-        assert plp_node["color"] == "#000000"
+        assert plp_node["color"]["background"] == "#000000"
 
 
 class TestNodeSizing:
@@ -322,21 +323,21 @@ class TestEdgeStyling:
             e for e in net.edges
             if e["from"] == "mp_davis_brave" and e["to"] == "mp_cooper_chester"
         )
-        assert positive_edge["color"] == EDGE_COLOR_POSITIVE
+        assert positive_edge["color"]["color"] == EDGE_COLOR_POSITIVE
         
         # Find edge with negative sentiment (pintard -> davis, sentiment=-1.0)
         negative_edge = next(
             e for e in net.edges
             if e["from"] == "mp_pintard_michael" and e["to"] == "mp_davis_brave"
         )
-        assert negative_edge["color"] == EDGE_COLOR_NEGATIVE
+        assert negative_edge["color"]["color"] == EDGE_COLOR_NEGATIVE
         
         # Find edge with neutral sentiment (davis -> pintard, sentiment=0.0)
         neutral_edge = next(
             e for e in net.edges
             if e["from"] == "mp_davis_brave" and e["to"] == "mp_pintard_michael"
         )
-        assert neutral_edge["color"] == EDGE_COLOR_NEUTRAL
+        assert neutral_edge["color"]["color"] == EDGE_COLOR_NEUTRAL
     
     def test_edge_thickness(self, sample_session_graph):
         """Edges should vary in thickness by mention count."""
@@ -437,3 +438,84 @@ class TestGraphConfiguration:
         options = net.options
         assert "physics" in options
         assert options["physics"]["enabled"] is True
+
+
+class TestSearchHighlighting:
+    """Test MP-9: Search and highlight functionality."""
+    
+    def test_no_highlighting_by_default(self, sample_session_graph):
+        """Without highlight_nodes, all nodes should have full opacity."""
+        net = build_force_directed_graph(sample_session_graph)
+        
+        # All nodes should have full opacity
+        for node in net.nodes:
+            assert node.get("opacity", 1.0) == 1.0
+    
+    def test_highlight_single_node(self, sample_session_graph):
+        """Highlighted node should have larger size and yellow border."""
+        highlight_nodes = ["mp_davis_brave"]
+        net = build_force_directed_graph(sample_session_graph, highlight_nodes=highlight_nodes)
+        
+        # Find highlighted node
+        davis_node = next(n for n in net.nodes if n["id"] == "mp_davis_brave")
+        
+        # Should have yellow border and full opacity
+        assert davis_node["color"]["border"] == "#FFFF00"  # Yellow
+        assert davis_node["borderWidth"] == 5
+        assert davis_node.get("opacity", 1.0) == 1.0
+    
+    def test_dimmed_non_highlighted_nodes(self, sample_session_graph):
+        """Non-highlighted nodes should be dimmed."""
+        highlight_nodes = ["mp_davis_brave"]
+        net = build_force_directed_graph(sample_session_graph, highlight_nodes=highlight_nodes)
+        
+        # Find non-highlighted nodes
+        cooper_node = next(n for n in net.nodes if n["id"] == "mp_cooper_chester")
+        pintard_node = next(n for n in net.nodes if n["id"] == "mp_pintard_michael")
+        
+        # Should be dimmed
+        assert cooper_node.get("opacity", 1.0) == 0.3
+        assert pintard_node.get("opacity", 1.0) == 0.3
+    
+    def test_edges_to_highlighted_nodes(self, sample_session_graph):
+        """Edges connected to highlighted nodes should have full opacity."""
+        highlight_nodes = ["mp_davis_brave"]
+        net = build_force_directed_graph(sample_session_graph, highlight_nodes=highlight_nodes)
+        
+        # Edges involving mp_davis_brave should have full opacity
+        connected_edge = next(
+            e for e in net.edges
+            if e["from"] == "mp_davis_brave" or e["to"] == "mp_davis_brave"
+        )
+        
+        assert connected_edge["color"]["opacity"] == 1.0
+    
+    def test_edges_without_highlighted_nodes(self, sample_session_graph):
+        """Edges not connected to highlighted nodes should be dimmed."""
+        # Highlight only Davis - other edges should be dimmed
+        highlight_nodes = ["mp_cooper_chester"]
+        net = build_force_directed_graph(sample_session_graph, highlight_nodes=highlight_nodes)
+        
+        # Edge between Pintard and Davis (not involving Cooper) should be dimmed
+        non_connected_edge = next(
+            e for e in net.edges
+            if e["from"] == "mp_pintard_michael" and e["to"] == "mp_davis_brave"
+        )
+        
+        assert non_connected_edge["color"]["opacity"] == 0.2
+    
+    def test_highlight_multiple_nodes(self, sample_session_graph):
+        """Multiple nodes can be highlighted simultaneously."""
+        highlight_nodes = ["mp_davis_brave", "mp_cooper_chester"]
+        net = build_force_directed_graph(sample_session_graph, highlight_nodes=highlight_nodes)
+        
+        davis_node = next(n for n in net.nodes if n["id"] == "mp_davis_brave")
+        cooper_node = next(n for n in net.nodes if n["id"] == "mp_cooper_chester")
+        pintard_node = next(n for n in net.nodes if n["id"] == "mp_pintard_michael")
+        
+        # Highlighted nodes should have full opacity
+        assert davis_node.get("opacity", 1.0) == 1.0
+        assert cooper_node.get("opacity", 1.0) == 1.0
+        
+        # Non-highlighted node should be dimmed
+        assert pintard_node.get("opacity", 1.0) == 0.3
