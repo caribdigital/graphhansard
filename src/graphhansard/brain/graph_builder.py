@@ -19,7 +19,7 @@ class StructuralRole(str, Enum):
 
 
 class EdgeSemanticType(str, Enum):
-    """Edge semantic categories per BC-4 and GR-7.
+    """Edge semantic categories per BC-4, BC-5, and GR-7.
 
     Speaker-related edge semantics (procedural,
     excluded from political graph by default):
@@ -27,6 +27,7 @@ class EdgeSemanticType(str, Enum):
     - ADMONISHING: Speaker warns or rebukes an MP
     - CUTTING_OFF: Speaker interrupts or cuts off an MP
     - RULING: Speaker makes a ruling on a point of order
+    - PROCEDURAL_CONFLICT: Point of Order raised by MP (BC-5)
 
     Standard political interaction (included in political graph):
     - MENTION: Standard reference between MPs
@@ -35,6 +36,7 @@ class EdgeSemanticType(str, Enum):
     ADMONISHING = "admonishing"
     CUTTING_OFF = "cutting_off"
     RULING = "ruling"
+    PROCEDURAL_CONFLICT = "procedural_conflict"
     MENTION = "mention"
 
 

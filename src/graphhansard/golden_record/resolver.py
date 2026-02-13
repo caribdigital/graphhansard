@@ -78,9 +78,10 @@ class AliasResolver:
         Returns:
             ResolutionResult with node_id, confidence, and method.
         """
-        # Apply Bahamian Creole normalization if enabled (BC-1, BC-2)
+        # Apply full normalization pipeline if enabled (BC-1, BC-2, BC-7)
         if self.normalize_creole:
-            mention = normalize_bahamian_creole(mention)
+            from ..brain.creole_utils import normalize_mention_for_resolution
+            mention = normalize_mention_for_resolution(mention)
         
         # Normalize the mention
         normalized = self._normalize(mention)
@@ -93,12 +94,17 @@ class AliasResolver:
         if result:
             return result
 
-        # Step 2: Fuzzy match
+        # Step 2: Partial constituency match (BC-6)
+        result = self._partial_constituency_match(normalized, query_date)
+        if result:
+            return result
+
+        # Step 3: Fuzzy match
         result = self._fuzzy_match(normalized, query_date)
         if result:
             return result
 
-        # Step 3: Unresolved
+        # Step 4: Unresolved
         self._log_unresolved(mention, debate_date)
         return ResolutionResult(
             node_id=None, confidence=0.0, method="unresolved", collision_warning=None
@@ -195,6 +201,61 @@ class AliasResolver:
             confidence=1.0,
             method="exact",
             collision_warning=collision_warning,
+        )
+
+    def _partial_constituency_match(
+        self, normalized: str, query_date: date | None
+    ) -> ResolutionResult | None:
+        """Attempt partial constituency match (BC-6).
+
+        Handles cases like "the Member for Cat Island" matching the full
+        constituency "Cat Island, Rum Cay and San Salvador".
+
+        Args:
+            normalized: Normalized mention string
+            query_date: Optional date for temporal filtering
+
+        Returns:
+            ResolutionResult if partial match found, None otherwise
+        """
+        # Check if this looks like a constituency reference
+        if "member for" not in normalized:
+            return None
+
+        # Extract the constituency part after "member for"
+        parts = normalized.split("member for", 1)
+        if len(parts) != 2:
+            return None
+        
+        constituency_fragment = parts[1].strip()
+        if not constituency_fragment:
+            return None
+
+        # Check each MP's constituency for partial match
+        matches = []
+        for mp in self.golden_record.mps:
+            normalized_constituency = self._normalize(mp.constituency)
+            
+            # Check if the fragment is contained in the full constituency name
+            # This handles cases like "cat island" matching "cat island, rum cay and san salvador"
+            if constituency_fragment in normalized_constituency:
+                matches.append(mp)
+
+        # If no matches or multiple ambiguous matches, return None
+        if len(matches) == 0:
+            return None
+        
+        if len(matches) > 1:
+            # Multiple constituencies match - this is ambiguous
+            # Log warning and return None to let fuzzy matching handle it
+            return None
+
+        # Single match found
+        return ResolutionResult(
+            node_id=matches[0].node_id,
+            confidence=0.95,  # High confidence but not exact
+            method="exact",
+            collision_warning=None,
         )
 
     def _fuzzy_match(

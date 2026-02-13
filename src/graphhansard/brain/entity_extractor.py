@@ -87,6 +87,11 @@ class EntityExtractor:
             r"(?:The\s+)?Attorney\s+General",
             re.IGNORECASE,
         ),
+        # BC-5: Point of Order detection pattern
+        "point_of_order": re.compile(
+            r"(?:Mr\.|Madam|Mr|Mdm\.?)\s+Speaker,?\s+(?:I\s+)?(?:rise\s+(?:on\s+)?(?:a\s+)?)?point\s+of\s+order",
+            re.IGNORECASE,
+        ),
     }
     
     # Deictic/Anaphoric reference patterns (BR-11)
@@ -213,6 +218,58 @@ class EntityExtractor:
             all_mentions.extend(segment_mentions)
 
         return all_mentions
+
+    def detect_point_of_order(self, transcript: dict) -> list[dict]:
+        """Detect Point of Order occurrences in a transcript (BC-5).
+
+        Returns Point of Order events as special procedural markers that can be
+        converted to PROCEDURAL_CONFLICT edge types by the graph builder.
+
+        Args:
+            transcript: DiarizedTranscript dict with session_id and segments
+
+        Returns:
+            List of Point of Order event dicts with:
+            - session_id: Session identifier
+            - source_node_id: MP who raised the point
+            - timestamp_start: When the point was raised
+            - timestamp_end: End of the point of order phrase
+            - segment_index: Segment number
+            - raw_text: Exact text matched
+        """
+        session_id = transcript.get("session_id", "unknown")
+        segments = transcript.get("segments", [])
+        point_of_order_events = []
+
+        point_of_order_pattern = self.PATTERNS.get("point_of_order")
+        if not point_of_order_pattern:
+            return point_of_order_events
+
+        for idx, segment in enumerate(segments):
+            text = segment.get("text", "")
+            source_node_id = segment.get("speaker_node_id") or segment.get("speaker_label", "UNKNOWN")
+            start_time = segment.get("start_time", 0.0)
+            end_time = segment.get("end_time", 0.0)
+
+            # Search for "Point of Order" pattern
+            for match in point_of_order_pattern.finditer(text):
+                # Calculate approximate timestamps for the match
+                char_start = match.start()
+                char_end = match.end()
+                mention_start, mention_end = self._estimate_mention_timestamps(
+                    text, char_start, char_end, start_time, end_time
+                )
+
+                point_of_order_events.append({
+                    "session_id": session_id,
+                    "source_node_id": source_node_id,
+                    "timestamp_start": mention_start,
+                    "timestamp_end": mention_end,
+                    "segment_index": idx,
+                    "raw_text": match.group(0).strip(),
+                })
+
+        return point_of_order_events
 
     def _extract_from_segment(
         self, segment: dict, segment_index: int, session_id: str,
@@ -356,6 +413,8 @@ class EntityExtractor:
 
         # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps
         for pattern_name, pattern in self.PATTERNS.items():
+            if pattern_name == "point_of_order":
+                continue  # Handled by detect_point_of_order(), not as MP mention
             for match in pattern.finditer(text):
                 mention_text = match.group(0).strip()
                 char_start = match.start()
