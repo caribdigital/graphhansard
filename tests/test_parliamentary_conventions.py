@@ -174,11 +174,16 @@ class TestBC6ConstituencyReferences:
         assert result.node_id == "mp_hanna_martin_glenys"
 
     def test_partial_constituency_complex(self, resolver):
-        """BC-6: Partial match works for complex constituency names."""
-        # "Central and South Abaco" should match when given "Central"
+        """BC-6: Partial match handles ambiguous fragments correctly."""
+        # "Central" appears in multiple constituencies: 
+        # - Central and South Eleuthera
+        # - Central and South Abaco  
+        # - Central Grand Bahama
+        # This is ambiguous and should return None (fall through to fuzzy matching)
         result = resolver.resolve("the Member for Central")
-        # This should match one of the "Central" constituencies
-        assert result.node_id is not None
+        # With multiple matches, partial matching returns None
+        # Fuzzy matching will then find the best match
+        assert result.node_id is not None  # Should still resolve via fuzzy match
 
     def test_all_39_constituencies_in_index(self, resolver):
         """BC-6: All 39 constituencies are in the alias index."""

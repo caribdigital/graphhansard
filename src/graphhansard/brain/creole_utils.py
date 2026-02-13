@@ -216,7 +216,7 @@ def normalize_mention_for_resolution(text: str) -> str:
         Normalized text ready for alias resolution
         
     Examples:
-        >>> normalize_mention_for_resolution("da Honourable Memba for Englaston")
+        >>> normalize_mention_for_resolution("da Honourable Memba for Englerston")
         'the Member for Englerston'
         >>> normalize_mention_for_resolution("The Hon. Fred Mitchell")
         'Fred Mitchell'

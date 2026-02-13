@@ -232,20 +232,31 @@ class AliasResolver:
             return None
 
         # Check each MP's constituency for partial match
+        matches = []
         for mp in self.golden_record.mps:
             normalized_constituency = self._normalize(mp.constituency)
             
             # Check if the fragment is contained in the full constituency name
             # This handles cases like "cat island" matching "cat island, rum cay and san salvador"
             if constituency_fragment in normalized_constituency:
-                return ResolutionResult(
-                    node_id=mp.node_id,
-                    confidence=0.95,  # High confidence but not exact
-                    method="exact",  # Treat as exact since it's a valid constituency reference
-                    collision_warning=None,
-                )
+                matches.append(mp)
 
-        return None
+        # If no matches or multiple ambiguous matches, return None
+        if len(matches) == 0:
+            return None
+        
+        if len(matches) > 1:
+            # Multiple constituencies match - this is ambiguous
+            # Log warning and return None to let fuzzy matching handle it
+            return None
+
+        # Single match found
+        return ResolutionResult(
+            node_id=matches[0].node_id,
+            confidence=0.95,  # High confidence but not exact
+            method="partial_constituency",  # Accurately reflect the method used
+            collision_warning=None,
+        )
 
     def _fuzzy_match(
         self, normalized: str, query_date: date | None
