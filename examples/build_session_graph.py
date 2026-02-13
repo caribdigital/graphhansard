@@ -67,25 +67,60 @@ def main():
         ),
     ]
     
-    # Step 2: Convert to graph dict format with sentiment
+    # Step 2: Convert to graph dict format with sentiment and timestamps
     # (In practice, sentiment would come from SentimentScorer)
     print("\nConverting mentions to graph format...")
     mention_dicts = [
-        mentions[0].to_graph_dict(sentiment_label="positive"),
-        mentions[1].to_graph_dict(sentiment_label="neutral"),
-        mentions[2].to_graph_dict(sentiment_label="negative"),
-        mentions[3].to_graph_dict(sentiment_label="positive"),
+        {
+            **mentions[0].to_graph_dict(sentiment_label="positive"),
+            "timestamp_start": mentions[0].timestamp_start,
+            "timestamp_end": mentions[0].timestamp_end,
+            "raw_mention": mentions[0].raw_mention,
+        },
+        {
+            **mentions[1].to_graph_dict(sentiment_label="neutral"),
+            "timestamp_start": mentions[1].timestamp_start,
+            "timestamp_end": mentions[1].timestamp_end,
+            "raw_mention": mentions[1].raw_mention,
+        },
+        {
+            **mentions[2].to_graph_dict(sentiment_label="negative"),
+            "timestamp_start": mentions[2].timestamp_start,
+            "timestamp_end": mentions[2].timestamp_end,
+            "raw_mention": mentions[2].raw_mention,
+        },
+        {
+            **mentions[3].to_graph_dict(sentiment_label="positive"),
+            "timestamp_start": mentions[3].timestamp_start,
+            "timestamp_end": mentions[3].timestamp_end,
+            "raw_mention": mentions[3].raw_mention,
+        },
     ]
     
     # Step 3: Build the session graph
     print("\nBuilding session graph...")
     builder = GraphBuilder()
     
-    # Optional: Provide MP registry for better node labeling
+    # Provide expanded MP registry with constituency and portfolio for MP-5
     mp_registry = {
-        "mp_davis_brave": ("Brave Davis", "PLP"),
-        "mp_cooper_chester": ("Chester Cooper", "PLP"),
-        "mp_pintard_michael": ("Michael Pintard", "FNM"),
+        "mp_davis_brave": {
+            "common_name": "Brave Davis",
+            "party": "PLP",
+            "constituency": "Cat Island, Rum Cay and San Salvador",
+            "current_portfolio": "Prime Minister",
+        },
+        "mp_cooper_chester": {
+            "common_name": "Chester Cooper",
+            "party": "PLP",
+            "constituency": "Exuma and Ragged Island",
+            "current_portfolio": "Deputy Prime Minister",
+        },
+        "mp_pintard_michael": {
+            "common_name": "Michael Pintard",
+            "party": "FNM",
+            "constituency": "Marco City",
+            "current_portfolio": "Leader of the Opposition",
+        },
     }
     
     session_graph = builder.build_session_graph(

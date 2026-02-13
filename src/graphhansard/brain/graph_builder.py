@@ -46,6 +46,8 @@ class NodeMetrics(BaseModel):
     node_id: str
     common_name: str
     party: str
+    constituency: str | None = Field(default=None, description="MP's constituency")
+    current_portfolio: str | None = Field(default=None, description="Current portfolio title")
     degree_in: int = 0
     degree_out: int = 0
     betweenness: float = 0.0
@@ -53,6 +55,16 @@ class NodeMetrics(BaseModel):
     closeness: float = 0.0
     structural_role: list[str] = Field(default_factory=list)
     community_id: int | None = None
+
+
+class MentionDetail(BaseModel):
+    """Individual mention detail for edge interaction display (MP-6)."""
+    
+    timestamp_start: float
+    timestamp_end: float
+    context_window: str
+    sentiment_label: str | None = None
+    raw_mention: str | None = None
 
 
 class EdgeRecord(BaseModel):
@@ -82,6 +94,10 @@ class EdgeRecord(BaseModel):
             "True if edge involves Speaker control node (GR-7); "
             "excluded from political graph by default"
         )
+    )
+    mention_details: list[MentionDetail] = Field(
+        default_factory=list,
+        description="Individual mentions with timestamps for MP-6"
     )
 
 
@@ -155,16 +171,20 @@ class GraphBuilder:
         mentions: list[dict],
         session_id: str,
         date: str,
-        mp_registry: dict[str, tuple[str, str]] | None = None,
+        mp_registry: dict[str, tuple[str, str] | dict] | None = None,
     ) -> SessionGraph:
         """Build a directed weighted graph from mention records.
 
         Args:
             mentions: List of MentionRecord dicts with keys: source_node_id,
-                     target_node_id, raw_mention, context_window, etc.
+                     target_node_id, raw_mention, context_window, timestamp_start,
+                     timestamp_end, sentiment_label (optional), etc.
             session_id: Parliamentary session identifier
             date: Session date (ISO format)
-            mp_registry: Optional dict mapping node_id to (common_name, party)
+            mp_registry: Optional dict mapping node_id to either:
+                        - tuple: (common_name, party)
+                        - dict: {"common_name": str, "party": str, 
+                                "constituency": str, "current_portfolio": str}
 
         Returns:
             SessionGraph with computed metrics and edges
@@ -192,10 +212,21 @@ class GraphBuilder:
                     "neutral_count": 0,
                     "negative_count": 0,
                     "contexts": [],
+                    "mention_details": [],
                 }
 
             edge_aggregations[key]["total_mentions"] += 1
             edge_aggregations[key]["contexts"].append(mention.get("context_window", ""))
+            
+            # Store mention detail for MP-6 (edge click functionality)
+            mention_detail = MentionDetail(
+                timestamp_start=mention.get("timestamp_start", 0.0),
+                timestamp_end=mention.get("timestamp_end", 0.0),
+                context_window=mention.get("context_window", ""),
+                sentiment_label=mention.get("sentiment_label"),
+                raw_mention=mention.get("raw_mention"),
+            )
+            edge_aggregations[key]["mention_details"].append(mention_detail)
 
             # If sentiment is provided, aggregate it
             if "sentiment_label" in mention:
@@ -238,6 +269,7 @@ class GraphBuilder:
                 neutral_count=neu,
                 negative_count=neg,
                 net_sentiment=net_sentiment,
+                mention_details=agg["mention_details"],
             )
             edges.append(edge_record)
 
@@ -281,13 +313,16 @@ class GraphBuilder:
     def compute_centrality(
         self,
         graph: "nx.DiGraph",
-        mp_registry: dict[str, tuple[str, str]] | None = None,
+        mp_registry: dict[str, tuple[str, str] | dict] | None = None,
     ) -> list[NodeMetrics]:
         """Compute degree, betweenness, eigenvector, closeness centrality.
 
         Args:
             graph: NetworkX directed graph
-            mp_registry: Optional dict mapping node_id to (common_name, party)
+            mp_registry: Optional dict mapping node_id to either:
+                        - tuple: (common_name, party)
+                        - dict: {"common_name": str, "party": str,
+                                "constituency": str, "current_portfolio": str}
 
         Returns:
             List of NodeMetrics for each node
@@ -331,13 +366,26 @@ class GraphBuilder:
             # Get MP info from registry if available
             common_name = node
             party = "Unknown"
+            constituency = None
+            current_portfolio = None
+            
             if mp_registry and node in mp_registry:
-                common_name, party = mp_registry[node]
+                # Support both tuple format (common_name, party) and dict format
+                reg_data = mp_registry[node]
+                if isinstance(reg_data, tuple):
+                    common_name, party = reg_data
+                elif isinstance(reg_data, dict):
+                    common_name = reg_data.get("common_name", node)
+                    party = reg_data.get("party", "Unknown")
+                    constituency = reg_data.get("constituency")
+                    current_portfolio = reg_data.get("current_portfolio")
 
             node_metric = NodeMetrics(
                 node_id=node,
                 common_name=common_name,
                 party=party,
+                constituency=constituency,
+                current_portfolio=current_portfolio,
                 degree_in=in_degree.get(node, 0),
                 degree_out=out_degree.get(node, 0),
                 betweenness=betweenness.get(node, 0.0),
