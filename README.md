@@ -59,8 +59,8 @@ GraphHansard is organized into four layers:
 |-------|---------|--------|
 | **Layer 0 — Golden Record** | Canonical entity knowledge base mapping all 39 MPs to their aliases, portfolios, and constituencies | ✅ Complete |
 | **Layer 1 — The Miner** | Audio ingestion pipeline (yt-dlp, rate limiting, metadata cataloguing) | 🔧 In Progress |
-| **Layer 2 — The Brain** | Transcription (Whisper), diarization (pyannote), entity extraction, sentiment scoring, graph construction | 📋 Planned |
-| **Layer 3 — The Map** | Interactive public dashboard (Streamlit + PyVis) | 📋 Planned |
+| **Layer 2 — The Brain** | Transcription (Whisper), diarization (pyannote), entity extraction, sentiment scoring, graph construction | ✅ Complete |
+| **Layer 3 — The Map** | Interactive public dashboard (Streamlit + PyVis force-directed graph visualization) | ✅ Complete |
 
 ---
 
@@ -193,6 +193,37 @@ Project Bay Street Graph — Golden Record v1.0 Diagnostic
 | **Golden Record** | The canonical entity knowledge base mapping all MPs to their aliases. |
 | **Control Node** | The Speaker of the House — governs debate but does not participate as a partisan actor. |
 | **Isolated Node** | An MP with low degree centrality — rarely mentioned and rarely mentioning others. |
+| **Force-Directed Graph** | Interactive network visualization where nodes repel and edges attract, creating natural layouts. |
+| **Net Sentiment** | (positive_mentions - negative_mentions) / total_mentions. Ranges from -1.0 to +1.0. |
+
+---
+
+## Interactive Dashboard
+
+The GraphHansard dashboard provides an interactive force-directed graph visualization of parliamentary interactions:
+
+### Features (MP-1 through MP-4)
+
+- **Force-Directed Layout**: MPs as nodes with physics-based positioning
+- **Party Colors**: PLP (gold), FNM (red/blue), COI (grey)
+- **Node Sizing**: Choose from degree, betweenness, eigenvector, or total mentions
+- **Edge Styling**: Thickness by mention count, color by sentiment (green/grey/red)
+- **Interactive Controls**: Pan, zoom, hover tooltips, metric selection
+
+### Quick Start
+
+```bash
+# Install dashboard dependencies
+pip install -e ".[dashboard]"
+
+# Generate sample data
+python examples/build_session_graph.py
+
+# Launch dashboard
+streamlit run src/graphhansard/dashboard/app.py
+```
+
+See [`docs/graph_visualization_guide.md`](docs/graph_visualization_guide.md) for complete documentation.
 
 ---
 
@@ -203,8 +234,8 @@ Project Bay Street Graph — Golden Record v1.0 Diagnostic
 - [ ] **M-1.3** Validation corpus — 50+ annotated mentions from real audio
 - [ ] **M-2.1** Transcription pipeline — Whisper + pyannote integration
 - [ ] **M-2.3** Entity extraction — mention logs from real sessions
-- [ ] **M-2.5** Graph construction — first session graphs with centrality metrics
-- [ ] **M-3.1** Dashboard prototype — single-session graph viewable
+- [x] **M-2.5** Graph construction — session graphs with centrality metrics
+- [x] **M-3.1** Dashboard prototype — force-directed graph visualization (MP-1 through MP-4)
 - [ ] **M-3.4** Public beta launch
 
 See [SRD v1.0](docs/SRD_v1.0.md) for the full requirements document and timeline.
