@@ -169,9 +169,13 @@ def build_force_directed_graph(
     """)
     
     # Use custom colors or defaults
-    colors = party_colors or PARTY_COLORS.copy()
-    if use_blue_for_fnm:
+    colors = party_colors.copy() if party_colors else PARTY_COLORS.copy()
+    if use_blue_for_fnm and "FNM" in colors:
         colors["FNM"] = "#1E90FF"  # Blue
+    
+    # Ensure Unknown key exists for fallback
+    if "Unknown" not in colors:
+        colors["Unknown"] = "#C0C0C0"
     
     # Extract metric values for normalization (MP-3)
     metric_values = []
