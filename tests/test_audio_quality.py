@@ -65,9 +65,9 @@ class TestSNREstimation:
         """Test SNR estimation for clean signal."""
         analyzer = AudioQualityAnalyzer()
 
-        # Create a clean signal (sine wave)
+        # Create a clean signal (sine wave, 10s for reliable frame stats)
         sample_rate = 16000
-        duration = 1.0
+        duration = 10.0
         frequency = 440.0
         t = np.linspace(0, duration, int(sample_rate * duration))
         audio = np.sin(2 * np.pi * frequency * t).astype(np.float32)
@@ -81,10 +81,11 @@ class TestSNREstimation:
         """Test SNR estimation for noisy signal."""
         analyzer = AudioQualityAnalyzer()
 
-        # Create a noisy signal (mostly noise)
+        # Create a noisy signal (mostly noise, 5s for reliable frame stats)
         sample_rate = 16000
-        duration = 1.0
-        audio = np.random.normal(0, 0.1, int(sample_rate * duration)).astype(
+        duration = 5.0
+        rng = np.random.default_rng(42)
+        audio = rng.normal(0, 0.1, int(sample_rate * duration)).astype(
             np.float32
         )
 
@@ -105,7 +106,8 @@ class TestSNREstimation:
         signal = np.sin(2 * np.pi * 440 * t)
 
         # Add moderate noise
-        noise = np.random.normal(0, 0.1, len(signal))
+        rng = np.random.default_rng(42)
+        noise = rng.normal(0, 0.1, len(signal))
         audio = (signal + noise).astype(np.float32)
 
         snr = analyzer.estimate_snr(audio, sample_rate)
@@ -347,9 +349,9 @@ class TestSegmentAnalysis:
             confidence=0.95,
         )
 
-        # Create clean audio
+        # Create clean audio (10s for reliable frame stats)
         audio = np.sin(
-            2 * np.pi * 440 * np.linspace(0, 1, 16000)
+            2 * np.pi * 440 * np.linspace(0, 10, 16000 * 10)
         ).astype(np.float32)
 
         metrics = analyzer.analyze_segment(
@@ -373,8 +375,9 @@ class TestSegmentAnalysis:
             confidence=0.8,
         )
 
-        # Create noisy audio
-        audio = np.random.normal(0, 0.1, 16000).astype(np.float32)
+        # Create noisy audio (5s for reliable frame stats)
+        rng = np.random.default_rng(42)
+        audio = rng.normal(0, 0.1, 16000 * 5).astype(np.float32)
 
         metrics = analyzer.analyze_segment(
             segment, audio_data=audio, session_avg_rms=0.05

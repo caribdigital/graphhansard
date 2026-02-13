@@ -132,7 +132,7 @@ class AudioQualityAnalyzer:
         # In this case, noise_rms ≈ signal_rms, which would give low SNR
         # For such cases, use standard deviation of frames as noise estimate
         frame_std = np.std(frames)
-        if frame_std < 0.01 * signal_rms:  # Very low variation
+        if frame_std < 0.01 * signal_rms and len(frames) > 50:  # Very low variation
             # Use a small fraction of signal as effective noise floor
             # This represents that the signal is very consistent (high quality)
             # 0.001 * signal_rms gives SNR = 20*log10(1/0.001) = 60dB
