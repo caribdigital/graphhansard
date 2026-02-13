@@ -99,6 +99,10 @@ class SessionGraph(BaseModel):
     edge_count: int = 0
     nodes: list[NodeMetrics] = Field(default_factory=list)
     edges: list[EdgeRecord] = Field(default_factory=list)
+    modularity_score: float | None = Field(
+        default=None,
+        description="Modularity score from community detection (BR-27)"
+    )
 
     def political_edges(self) -> list[EdgeRecord]:
         """Return only non-procedural edges (Speaker excluded).
@@ -254,6 +258,11 @@ class GraphBuilder:
         # Assign structural roles
         node_metrics = self._assign_structural_roles(node_metrics)
         
+        # Detect communities (BR-27)
+        community_map, modularity = self.detect_communities(G)
+        for node_metric in node_metrics:
+            node_metric.community_id = community_map.get(node_metric.node_id)
+        
         # Build SessionGraph
         graph_file = f"graphs/sessions/{session_id}.graphml"
         session_graph = SessionGraph(
@@ -264,6 +273,7 @@ class GraphBuilder:
             edge_count=G.number_of_edges(),
             nodes=node_metrics,
             edges=edges,
+            modularity_score=modularity,
         )
         
         return session_graph
@@ -498,6 +508,11 @@ class GraphBuilder:
         node_metrics = self.compute_centrality(G, mp_registry)
         node_metrics = self._assign_structural_roles(node_metrics)
         
+        # Detect communities (BR-27)
+        community_map, modularity = self.detect_communities(G)
+        for node_metric in node_metrics:
+            node_metric.community_id = community_map.get(node_metric.node_id)
+        
         # Build cumulative SessionGraph
         start_date, end_date = date_range
         date_label = f"{start_date}_to_{end_date}"
@@ -511,18 +526,21 @@ class GraphBuilder:
             edge_count=G.number_of_edges(),
             nodes=node_metrics,
             edges=edges,
+            modularity_score=modularity,
         )
         
         return cumulative_graph
 
-    def detect_communities(self, graph: "nx.DiGraph") -> dict[str, int]:
-        """Run Louvain community detection. Returns node_id → community_id.
+    def detect_communities(
+        self, graph: "nx.DiGraph"
+    ) -> tuple[dict[str, int], float]:
+        """Run Louvain community detection (BR-27).
         
         Args:
             graph: NetworkX directed graph
             
         Returns:
-            Dictionary mapping node_id to community_id
+            Tuple of (node_to_community mapping, modularity_score)
         """
         try:
             import networkx as nx
@@ -540,10 +558,63 @@ class GraphBuilder:
                 for node in community_nodes:
                     node_to_community[node] = community_id
             
-            return node_to_community
+            # Compute modularity score
+            modularity = nx_comm.modularity(undirected, communities)
+            
+            return node_to_community, modularity
         except (ImportError, AttributeError, nx.NetworkXError):
             # Fallback: assign all to community 0 if Louvain not available
-            return {node: 0 for node in graph.nodes()}
+            return {node: 0 for node in graph.nodes()}, 0.0
+    
+    def identify_cross_party_communities(
+        self,
+        node_metrics: list[NodeMetrics],
+    ) -> list[dict]:
+        """Identify communities containing members from multiple parties (BR-27).
+        
+        Args:
+            node_metrics: List of NodeMetrics with community_id and party info
+            
+        Returns:
+            List of community analysis dicts with party breakdown
+        """
+        from collections import defaultdict
+        
+        # Group nodes by community
+        communities: dict[int, list[NodeMetrics]] = defaultdict(list)
+        for node in node_metrics:
+            if node.community_id is not None:
+                communities[node.community_id].append(node)
+        
+        # Analyze each community
+        cross_party_communities = []
+        for community_id, members in communities.items():
+            # Count parties in this community
+            party_counts: dict[str, int] = defaultdict(int)
+            for member in members:
+                party_counts[member.party] += 1
+            
+            # Identify as cross-party if multiple parties present
+            is_cross_party = len(party_counts) > 1
+            
+            community_info = {
+                "community_id": community_id,
+                "size": len(members),
+                "parties": dict(party_counts),
+                "is_cross_party": is_cross_party,
+                "members": [
+                    {
+                        "node_id": m.node_id,
+                        "common_name": m.common_name,
+                        "party": m.party,
+                    }
+                    for m in members
+                ],
+            }
+            
+            cross_party_communities.append(community_info)
+        
+        return cross_party_communities
 
     def export_graphml(self, graph: "nx.DiGraph", output_path: str) -> None:
         """Export graph in GraphML format.
@@ -634,32 +705,97 @@ class GraphBuilder:
         self,
         session_graph: SessionGraph,
     ) -> "nx.DiGraph":
-        """Reconstruct a NetworkX graph from a SessionGraph object.
+        """Reconstruct a NetworkX graph from a SessionGraph object (BR-28).
+        
+        Includes all node attributes (party, community_id, centrality scores,
+        structural_role) and edge attributes (sentiment breakdown, semantic_type).
         
         Args:
             session_graph: SessionGraph with edges and nodes
             
         Returns:
-            NetworkX DiGraph
+            NetworkX DiGraph with full attributes
         """
         import networkx as nx
         
         G = nx.DiGraph()
         
-        # Add nodes
+        # Add nodes with all attributes (BR-28)
         for node_metric in session_graph.nodes:
-            G.add_node(node_metric.node_id)
+            G.add_node(
+                node_metric.node_id,
+                common_name=node_metric.common_name,
+                party=node_metric.party,
+                degree_in=node_metric.degree_in,
+                degree_out=node_metric.degree_out,
+                betweenness=node_metric.betweenness,
+                eigenvector=node_metric.eigenvector,
+                closeness=node_metric.closeness,
+                structural_role=",".join(node_metric.structural_role),
+                community_id=node_metric.community_id,
+            )
         
-        # Add edges
+        # Add edges with all attributes (BR-28)
         for edge in session_graph.edges:
             G.add_edge(
                 edge.source_node_id,
                 edge.target_node_id,
                 weight=edge.total_mentions,
+                total_mentions=edge.total_mentions,
                 positive_count=edge.positive_count,
                 neutral_count=edge.neutral_count,
                 negative_count=edge.negative_count,
                 net_sentiment=edge.net_sentiment,
+                semantic_type=edge.semantic_type.value,
+                is_procedural=edge.is_procedural,
             )
         
         return G
+    
+    def export_all_formats(
+        self,
+        session_graph: SessionGraph,
+        base_output_dir: str = "graphs/exports",
+    ) -> dict[str, str]:
+        """Export graph in all required formats (BR-28).
+        
+        Exports GraphML, GEXF, JSON, and CSV to the specified directory.
+        
+        Args:
+            session_graph: SessionGraph to export
+            base_output_dir: Base directory for exports (default: graphs/exports/)
+            
+        Returns:
+            Dictionary mapping format to output path
+        """
+        from pathlib import Path
+        
+        base_path = Path(base_output_dir) / session_graph.session_id
+        base_path.mkdir(parents=True, exist_ok=True)
+        
+        # Reconstruct NetworkX graph with full attributes
+        G = self.build_graph_from_session(session_graph)
+        
+        output_paths = {}
+        
+        # GraphML export (canonical format for NetworkX interop)
+        graphml_path = str(base_path / f"{session_graph.session_id}.graphml")
+        self.export_graphml(G, graphml_path)
+        output_paths["graphml"] = graphml_path
+        
+        # GEXF export (for Gephi users)
+        gexf_path = str(base_path / f"{session_graph.session_id}.gexf")
+        self.export_gexf(G, gexf_path)
+        output_paths["gexf"] = gexf_path
+        
+        # JSON export (for dashboard consumption)
+        json_path = str(base_path / f"{session_graph.session_id}.json")
+        self.export_json(session_graph, json_path)
+        output_paths["json"] = json_path
+        
+        # CSV export (edge list for spreadsheet/data science users)
+        csv_path = str(base_path / f"{session_graph.session_id}.csv")
+        self.export_csv(session_graph, csv_path)
+        output_paths["csv"] = csv_path
+        
+        return output_paths
