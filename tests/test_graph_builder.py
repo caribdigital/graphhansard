@@ -646,6 +646,114 @@ class TestExportFunctionality:
         
         assert output_path.exists()
 
+    def test_export_all_formats(self, tmp_path):
+        """Test export_all_formats exports all required formats (BR-28)."""
+        builder = GraphBuilder()
+        
+        mp_registry = {
+            "mp_a": ("MP A", "PLP"),
+            "mp_b": ("MP B", "FNM"),
+        }
+        
+        mentions = [
+            {
+                "source_node_id": "mp_a",
+                "target_node_id": "mp_b",
+                "sentiment_label": "positive",
+            },
+        ]
+        
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_all_formats",
+            date="2024-01-15",
+            mp_registry=mp_registry,
+        )
+        
+        output_paths = builder.export_all_formats(
+            session_graph,
+            base_output_dir=str(tmp_path / "exports"),
+        )
+        
+        # Verify all formats are exported
+        assert "graphml" in output_paths
+        assert "gexf" in output_paths
+        assert "json" in output_paths
+        assert "csv" in output_paths
+        
+        # Verify files exist
+        from pathlib import Path
+        for format_type, path in output_paths.items():
+            assert Path(path).exists(), f"{format_type} file not created"
+
+    def test_node_attributes_in_exports(self, tmp_path):
+        """Test that exports include all node attributes (BR-28)."""
+        builder = GraphBuilder()
+        
+        mp_registry = {
+            "mp_a": ("MP A", "PLP"),
+            "mp_b": ("MP B", "FNM"),
+        }
+        
+        mentions = [
+            {"source_node_id": "mp_a", "target_node_id": "mp_b"},
+        ]
+        
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_attributes",
+            date="2024-01-15",
+            mp_registry=mp_registry,
+        )
+        
+        # Test GraphML export includes attributes
+        G = builder.build_graph_from_session(session_graph)
+        
+        # Verify node attributes
+        for node_id in G.nodes():
+            node_data = G.nodes[node_id]
+            assert "party" in node_data
+            assert "community_id" in node_data
+            assert "betweenness" in node_data
+            assert "eigenvector" in node_data
+            assert "closeness" in node_data
+            assert "structural_role" in node_data
+        
+        # Verify edge attributes
+        for source, target in G.edges():
+            edge_data = G.edges[source, target]
+            assert "weight" in edge_data
+            assert "positive_count" in edge_data
+            assert "neutral_count" in edge_data
+            assert "negative_count" in edge_data
+            assert "net_sentiment" in edge_data
+            assert "semantic_type" in edge_data
+
+    def test_json_export_includes_modularity(self, tmp_path):
+        """Test that JSON export includes modularity score (BR-27)."""
+        builder = GraphBuilder()
+        
+        mentions = [
+            {"source_node_id": "mp_a", "target_node_id": "mp_b"},
+        ]
+        
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_modularity_json",
+            date="2024-01-15",
+        )
+        
+        output_path = tmp_path / "test_modularity.json"
+        builder.export_json(session_graph, str(output_path))
+        
+        import json
+        with open(output_path) as f:
+            data = json.load(f)
+        
+        # Verify modularity_score is in JSON
+        assert "modularity_score" in data
+        assert isinstance(data["modularity_score"], (float, type(None)))
+
 
 class TestCommunityDetection:
     """Test community detection functionality."""
@@ -668,13 +776,116 @@ class TestCommunityDetection:
         )
         
         G = builder.build_graph_from_session(session_graph)
-        communities = builder.detect_communities(G)
+        communities, modularity = builder.detect_communities(G)
         
         # All nodes should be assigned to a community
         assert len(communities) == 4
         for node_id in ["mp_a", "mp_b", "mp_c", "mp_d"]:
             assert node_id in communities
             assert isinstance(communities[node_id], int)
+        
+        # Modularity should be computed
+        assert isinstance(modularity, float)
+        assert -1.0 <= modularity <= 1.0
+
+    def test_community_assignment_in_session_graph(self):
+        """Test that community_id is assigned to nodes in SessionGraph (BR-27)."""
+        builder = GraphBuilder()
+        
+        mentions = [
+            {"source_node_id": "mp_a", "target_node_id": "mp_b"},
+            {"source_node_id": "mp_b", "target_node_id": "mp_a"},
+        ]
+        
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_community_assign",
+            date="2024-01-15",
+        )
+        
+        # All nodes should have community_id assigned
+        for node in session_graph.nodes:
+            assert node.community_id is not None
+            assert isinstance(node.community_id, int)
+        
+        # Modularity score should be present
+        assert session_graph.modularity_score is not None
+        assert isinstance(session_graph.modularity_score, float)
+
+    def test_cross_party_community_detection(self):
+        """Test cross-party community identification (BR-27)."""
+        builder = GraphBuilder()
+        
+        mp_registry = {
+            "mp_a": ("MP A", "PLP"),
+            "mp_b": ("MP B", "PLP"),
+            "mp_c": ("MP C", "FNM"),
+            "mp_d": ("MP D", "FNM"),
+        }
+        
+        # Create a network where PLP and FNM members interact
+        mentions = [
+            {"source_node_id": "mp_a", "target_node_id": "mp_c"},
+            {"source_node_id": "mp_c", "target_node_id": "mp_a"},
+            {"source_node_id": "mp_b", "target_node_id": "mp_d"},
+            {"source_node_id": "mp_d", "target_node_id": "mp_b"},
+        ]
+        
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_cross_party",
+            date="2024-01-15",
+            mp_registry=mp_registry,
+        )
+        
+        # Identify cross-party communities
+        cross_party = builder.identify_cross_party_communities(session_graph.nodes)
+        
+        # Should have at least one community
+        assert len(cross_party) > 0
+        
+        # Check structure of community analysis
+        for community in cross_party:
+            assert "community_id" in community
+            assert "size" in community
+            assert "parties" in community
+            assert "is_cross_party" in community
+            assert "members" in community
+            assert isinstance(community["parties"], dict)
+
+    def test_modularity_score_in_cumulative_graph(self):
+        """Test modularity score in cumulative graph (BR-27)."""
+        builder = GraphBuilder()
+        
+        # Session 1
+        sg1 = builder.build_session_graph(
+            mentions=[{"source_node_id": "mp_a", "target_node_id": "mp_b"}],
+            session_id="s1",
+            date="2024-01-15",
+        )
+        
+        # Session 2
+        sg2 = builder.build_session_graph(
+            mentions=[{"source_node_id": "mp_b", "target_node_id": "mp_c"}],
+            session_id="s2",
+            date="2024-01-22",
+        )
+        
+        cumulative = builder.build_cumulative_graph(
+            session_graphs=[sg1, sg2],
+            cumulative_id="cumulative_test",
+            date_range=("2024-01-15", "2024-01-22"),
+        )
+        
+        # Modularity should be present
+        assert cumulative.modularity_score is not None
+        assert isinstance(cumulative.modularity_score, float)
+        
+        # All nodes should have community assignments
+        for node in cumulative.nodes:
+            assert node.community_id is not None
+
+
 
 
 class TestPerformance:
