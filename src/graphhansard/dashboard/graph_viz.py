@@ -8,6 +8,7 @@ See SRD §9.3 (Layer 3 — The Map) and Issue #16.
 
 from __future__ import annotations
 
+import os
 from typing import Literal
 
 from pyvis.network import Network
@@ -271,16 +272,19 @@ def build_force_directed_graph(
 
 def render_graph_to_html(
     net: Network,
-    output_path: str = "/tmp/graph.html",
+    output_path: str | None = None,
 ) -> str:
     """Render PyVis network to HTML file.
-    
+
     Args:
         net: PyVis Network object
-        output_path: Path to output HTML file
-        
+        output_path: Path to output HTML file (defaults to system temp dir)
+
     Returns:
         Path to generated HTML file
     """
+    if output_path is None:
+        import tempfile
+        output_path = os.path.join(tempfile.gettempdir(), "graphhansard_graph.html")
     net.save_graph(output_path)
     return output_path

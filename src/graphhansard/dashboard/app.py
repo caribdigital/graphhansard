@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 from pathlib import Path
 
 from graphhansard.brain.graph_builder import SessionGraph
-from graphhansard.dashboard.graph_viz import build_force_directed_graph, render_graph_to_html
+from graphhansard.dashboard.graph_viz import build_force_directed_graph
 
 
 def load_sample_graph() -> SessionGraph | None:
@@ -86,13 +86,9 @@ def main():
                     width="100%",
                 )
                 
-                # Render to HTML
-                html_path = render_graph_to_html(net, "/tmp/graph.html")
-                
-                # Display in Streamlit
-                with open(html_path, "r", encoding="utf-8") as f:
-                    html_content = f.read()
-                    components.html(html_content, height=800, scrolling=True)
+                # Render to HTML in memory (no temp file needed)
+                html_content = net.generate_html()
+                components.html(html_content, height=800, scrolling=True)
             
             # Display legend
             st.markdown("---")
