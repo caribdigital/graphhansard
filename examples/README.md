@@ -36,10 +36,28 @@ python examples/transcribe_session.py audio.wav --output results/transcript.json
 - Shows summary statistics
 - Displays first few segments as preview
 
+## Sentiment Analysis
+
+### sentiment_demo.py
+
+Demonstrates the sentiment scoring pipeline for MP-to-MP mentions. This shows how to classify parliamentary references as positive, neutral, or negative, and how to detect parliamentary markers like "point of order" and heckling.
+
+**Usage:**
+```bash
+python examples/sentiment_demo.py
+```
+
+**Features:**
+- Zero-shot sentiment classification using BART
+- Parliamentary marker detection
+- Batch processing demonstration
+- Sample parliamentary contexts with expected results
+
+**Note:** Requires internet access on first run to download the BART model (~1.6GB). Subsequent runs use the cached model.
+
 ## More Examples (Coming Soon)
 
 - Entity extraction from transcripts
-- Sentiment analysis on mentions
 - Graph construction from mentions
 - Dashboard visualization
 
