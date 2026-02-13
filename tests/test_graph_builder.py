@@ -727,3 +727,98 @@ class TestPerformance:
             assert export_time < 1.0, (
                 f"JSON export took {export_time:.2f}s, should be <1s"
             )
+
+
+class TestMentionRecordIntegration:
+    """Test integration with MentionRecord model."""
+
+    def test_mention_record_to_graph_dict(self):
+        """Test MentionRecord.to_graph_dict() helper method."""
+        from graphhansard.brain.entity_extractor import (
+            MentionRecord,
+            ResolutionMethod,
+        )
+        
+        mention = MentionRecord(
+            session_id="test_session",
+            source_node_id="mp_davis_brave",
+            target_node_id="mp_cooper_chester",
+            raw_mention="The Deputy Prime Minister",
+            resolution_method=ResolutionMethod.EXACT,
+            resolution_score=1.0,
+            timestamp_start=10.5,
+            timestamp_end=12.0,
+            context_window="I commend the Deputy Prime Minister.",
+            segment_index=5,
+            is_self_reference=False,
+        )
+        
+        graph_dict = mention.to_graph_dict(sentiment_label="positive")
+        
+        assert graph_dict["source_node_id"] == "mp_davis_brave"
+        assert graph_dict["target_node_id"] == "mp_cooper_chester"
+        assert graph_dict["sentiment_label"] == "positive"
+        assert graph_dict["context_window"] == "I commend the Deputy Prime Minister."
+        assert graph_dict["is_self_reference"] is False
+
+    def test_full_workflow_mention_to_graph(self):
+        """Test complete workflow: MentionRecord → GraphBuilder → SessionGraph."""
+        from graphhansard.brain.entity_extractor import (
+            MentionRecord,
+            ResolutionMethod,
+        )
+        
+        # Create MentionRecord objects
+        mentions_records = [
+            MentionRecord(
+                session_id="session_001",
+                source_node_id="mp_davis_brave",
+                target_node_id="mp_cooper_chester",
+                raw_mention="The Deputy PM",
+                resolution_method=ResolutionMethod.EXACT,
+                resolution_score=1.0,
+                timestamp_start=10.0,
+                timestamp_end=11.0,
+                context_window="I thank the Deputy PM for his work.",
+                segment_index=0,
+            ),
+            MentionRecord(
+                session_id="session_001",
+                source_node_id="mp_cooper_chester",
+                target_node_id="mp_davis_brave",
+                raw_mention="The Prime Minister",
+                resolution_method=ResolutionMethod.EXACT,
+                resolution_score=1.0,
+                timestamp_start=20.0,
+                timestamp_end=21.0,
+                context_window="The Prime Minister has shown leadership.",
+                segment_index=1,
+            ),
+        ]
+        
+        # Convert to graph dict format with sentiment
+        mention_dicts = [
+            mr.to_graph_dict(sentiment_label="positive") for mr in mentions_records
+        ]
+        
+        # Build graph
+        builder = GraphBuilder()
+        session_graph = builder.build_session_graph(
+            mentions=mention_dicts,
+            session_id="session_001",
+            date="2024-01-15",
+        )
+        
+        # Validate
+        assert session_graph.session_id == "session_001"
+        assert session_graph.node_count == 2
+        assert session_graph.edge_count == 2
+        
+        # Check edges
+        edge1 = next(
+            e for e in session_graph.edges
+            if e.source_node_id == "mp_davis_brave"
+        )
+        assert edge1.target_node_id == "mp_cooper_chester"
+        assert edge1.total_mentions == 1
+        assert edge1.positive_count == 1
