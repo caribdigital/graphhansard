@@ -623,9 +623,8 @@ class GraphBuilder:
             graph: NetworkX directed graph
             output_path: Path to output file
         """
-        from pathlib import Path
-
         import networkx as nx
+        from pathlib import Path
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         nx.write_graphml(graph, output_path)
@@ -637,9 +636,8 @@ class GraphBuilder:
             graph: NetworkX directed graph
             output_path: Path to output file
         """
-        from pathlib import Path
-
         import networkx as nx
+        from pathlib import Path
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         nx.write_gexf(graph, output_path)
