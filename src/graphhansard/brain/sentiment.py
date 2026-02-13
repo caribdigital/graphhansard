@@ -100,7 +100,6 @@ class SentimentScorer:
             "order! order!",
             "shame!",
             "withdraw!",
-            "hear, hear",
         ],
     }
 
@@ -111,14 +110,6 @@ class SentimentScorer:
             model_name: HuggingFace model identifier for zero-shot classification.
                        Default is facebook/bart-large-mnli for v1.0.
         """
-        try:
-            from transformers import pipeline
-        except ImportError as e:
-            raise ImportError(
-                "transformers library is required for SentimentScorer. "
-                "Install with: pip install transformers"
-            ) from e
-
         self.model_name = model_name
         self.pipeline = None
         self._labels = [
@@ -130,7 +121,13 @@ class SentimentScorer:
     def _load_model(self):
         """Lazy load the model pipeline on first use."""
         if self.pipeline is None:
-            from transformers import pipeline
+            try:
+                from transformers import pipeline
+            except ImportError as e:
+                raise ImportError(
+                    "transformers library is required for SentimentScorer. "
+                    "Install with: pip install transformers"
+                ) from e
 
             self.pipeline = pipeline(
                 "zero-shot-classification",
