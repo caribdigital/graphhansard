@@ -139,9 +139,10 @@ class TestSentimentColor:
     
     def test_threshold_boundaries(self):
         """Test exact threshold values."""
-        assert get_sentiment_color(0.2) == EDGE_COLOR_NEUTRAL  # Just at threshold
+        # Values at boundaries should be neutral (not strictly > or < threshold)
+        assert get_sentiment_color(0.2) == EDGE_COLOR_NEUTRAL  # At positive boundary
         assert get_sentiment_color(0.21) == EDGE_COLOR_POSITIVE  # Just above
-        assert get_sentiment_color(-0.2) == EDGE_COLOR_NEUTRAL  # Just at threshold
+        assert get_sentiment_color(-0.2) == EDGE_COLOR_NEUTRAL  # At negative boundary
         assert get_sentiment_color(-0.21) == EDGE_COLOR_NEGATIVE  # Just below
 
 

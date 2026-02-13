@@ -188,11 +188,12 @@ def build_force_directed_graph(
             metric_values.append(node.eigenvector)
         elif metric == "total_mentions":
             # Calculate total mentions for this node across all edges
+            # Note: Each mention is counted once per direction (source or target)
             total = 0
             for edge in session_graph.edges:
                 if edge.source_node_id == node.node_id:
                     total += edge.total_mentions
-                if edge.target_node_id == node.node_id:
+                elif edge.target_node_id == node.node_id:  # Use elif to avoid double-counting self-loops
                     total += edge.total_mentions
             metric_values.append(total)
     

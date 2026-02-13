@@ -17,7 +17,7 @@ from graphhansard.dashboard.graph_viz import build_force_directed_graph
 class TestDashboardDataLoading:
     """Test dashboard data loading functionality."""
     
-    def test_load_sample_graph_when_exists(self, tmp_path, monkeypatch):
+    def test_load_sample_graph_when_exists(self, tmp_path):
         """Should load sample graph if file exists."""
         # Create a sample graph file
         sample_data = {
@@ -63,32 +63,41 @@ class TestDashboardDataLoading:
             ],
         }
         
-        # Create the output directory and file
+        # Create the output directory and file in the tmp_path
         output_dir = tmp_path / "output"
         output_dir.mkdir()
         sample_file = output_dir / "sample_session_metrics.json"
         with open(sample_file, "w") as f:
             json.dump(sample_data, f)
         
-        # Monkeypatch Path to point to our tmp_path
-        monkeypatch.setattr("graphhansard.dashboard.app.Path", lambda p: tmp_path / p)
-        
-        # Load the graph
-        graph = load_sample_graph()
-        
-        assert graph is not None
-        assert isinstance(graph, SessionGraph)
-        assert graph.session_id == "test_session"
-        assert graph.node_count == 2
-        assert graph.edge_count == 1
+        # Change to the tmp directory to simulate running from project root
+        import os
+        original_dir = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+            
+            # Load the graph
+            graph = load_sample_graph()
+            
+            assert graph is not None
+            assert isinstance(graph, SessionGraph)
+            assert graph.session_id == "test_session"
+            assert graph.node_count == 2
+            assert graph.edge_count == 1
+        finally:
+            os.chdir(original_dir)
     
-    def test_load_sample_graph_when_missing(self, tmp_path, monkeypatch):
+    def test_load_sample_graph_when_missing(self, tmp_path):
         """Should return None if sample graph file doesn't exist."""
-        # Monkeypatch Path to point to a directory without the sample file
-        monkeypatch.setattr("graphhansard.dashboard.app.Path", lambda p: tmp_path / p)
-        
-        graph = load_sample_graph()
-        assert graph is None
+        # Change to a directory without the sample file
+        import os
+        original_dir = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+            graph = load_sample_graph()
+            assert graph is None
+        finally:
+            os.chdir(original_dir)
 
 
 class TestDashboardIntegration:
