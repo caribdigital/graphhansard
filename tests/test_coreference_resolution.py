@@ -133,19 +133,19 @@ class TestSpeakerHistoryBuilding:
         assert history[1]["node_id"] == "mp_cooper_chester"
         assert history[2]["node_id"] == "mp_mitchell_fred"
 
-    def test_build_speaker_history_recency_scores(self, extractor):
-        """Speaker history includes recency scores."""
+    def test_build_speaker_history_ordering(self, extractor):
+        """Speaker history is ordered oldest-first."""
         segments = [
             {"speaker_node_id": "mp_davis_brave", "text": "First statement"},
             {"speaker_node_id": "mp_cooper_chester", "text": "Second statement"},
             {"speaker_node_id": "mp_mitchell_fred", "text": "Current statement"},
         ]
-        
+
         history = extractor._build_speaker_history(2, segments)
-        
-        # More recent speakers should have higher recency scores
+
+        # Oldest speaker first, most recent last
         assert len(history) == 2
-        assert history[0]["recency_score"] < history[1]["recency_score"]
+        assert history[0]["segment_index"] < history[1]["segment_index"]
 
     def test_build_speaker_history_limits_window(self, extractor):
         """Speaker history respects context window size."""

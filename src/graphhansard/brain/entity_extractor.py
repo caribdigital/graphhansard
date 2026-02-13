@@ -96,7 +96,7 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
         "member_opposite": re.compile(
-            r"(?:the\s+)?(?:hon(?:ourable|\.)?|honourable)?\s*(?:Member|gentleman|lady)\s+opposite",
+            r"(?:the\s+)?(?:hon(?:ourable|\.)?\s+)?(?:Member|gentleman|lady)\s+opposite",
             re.IGNORECASE,
         ),
         "honourable_friend": re.compile(
@@ -108,7 +108,7 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
         "honourable_colleague": re.compile(
-            r"my\s+(?:hon(?:ourable|\.)?(?:\s+)?)?colleague",
+            r"my\s+(?:hon(?:ourable|\.)?\s+)?colleague",
             re.IGNORECASE,
         ),
         "previous_speaker": re.compile(
@@ -333,18 +333,30 @@ class EntityExtractor:
 
     def _extract_pattern_mentions(self, text: str) -> list[tuple[str, int, int]]:
         """Extract mentions using regex patterns.
-        
-        Includes both standard patterns and deictic patterns (BR-11).
+
+        Deictic patterns (BR-11) are processed first and take priority
+        over standard patterns to prevent greedy capture pollution.
 
         Returns:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
 
-        # Extract standard parliamentary patterns
+        # Phase 1: Extract deictic/anaphoric patterns first (BR-11) — they take priority
+        deictic_ranges = []
+        for pattern_name, pattern in self.DEICTIC_PATTERNS.items():
+            for match in pattern.finditer(text):
+                mention_text = match.group(0).strip()
+                char_start = match.start()
+                char_end = match.end()
+
+                if len(mention_text) >= 5:
+                    mentions.append((mention_text, char_start, char_end))
+                    deictic_ranges.append((char_start, char_end))
+
+        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps
         for pattern_name, pattern in self.PATTERNS.items():
             for match in pattern.finditer(text):
-                # Get the full match as the mention
                 mention_text = match.group(0).strip()
                 char_start = match.start()
 
@@ -360,17 +372,14 @@ class EntityExtractor:
                 mention_text = ' '.join(cleaned_words).strip()
                 char_end = char_start + len(mention_text)
 
-                # Only add if mention is substantial (at least 5 chars)
-                if len(mention_text) >= 5:
-                    mentions.append((mention_text, char_start, char_end))
-        
-        # Extract deictic/anaphoric patterns (BR-11)
-        for pattern_name, pattern in self.DEICTIC_PATTERNS.items():
-            for match in pattern.finditer(text):
-                mention_text = match.group(0).strip()
-                char_start = match.start()
-                char_end = match.end()
-                
+                # Skip if overlaps with a deictic match
+                overlaps_deictic = any(
+                    not (char_end <= d_start or char_start >= d_end)
+                    for d_start, d_end in deictic_ranges
+                )
+                if overlaps_deictic:
+                    continue
+
                 # Only add if mention is substantial (at least 5 chars)
                 if len(mention_text) >= 5:
                     mentions.append((mention_text, char_start, char_end))
@@ -545,12 +554,6 @@ class EntityExtractor:
                     "text": segment.get("text", ""),
                 })
         
-        # Calculate recency scores based on actual history size
-        if history:
-            for i, entry in enumerate(history):
-                # Most recent speaker gets score of 1.0, oldest gets score closer to 0
-                entry["recency_score"] = (i + 1) / len(history)
-        
         return history
 
     def _resolve_coreference(
@@ -624,7 +627,7 @@ class EntityExtractor:
             most_recent = max(candidates, key=lambda x: x["segment_index"])
             return most_recent["node_id"]
         
-        # For other deictic references, use recency score
+        # For other deictic references, return most recent candidate
         # Return the most recent candidate
         candidates.sort(key=lambda x: x["segment_index"], reverse=True)
         return candidates[0]["node_id"]
