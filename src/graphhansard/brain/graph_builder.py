@@ -283,7 +283,11 @@ class GraphBuilder:
             List of NodeMetrics for each node
         """
         import networkx as nx
-        
+
+        # Early return for empty graphs
+        if graph.number_of_nodes() == 0:
+            return []
+
         # Compute centrality metrics (BR-24)
         in_degree = dict(graph.in_degree())
         out_degree = dict(graph.out_degree())
@@ -291,24 +295,24 @@ class GraphBuilder:
         # Betweenness centrality
         try:
             betweenness = nx.betweenness_centrality(graph)
-        except (nx.NetworkXError, ZeroDivisionError):
+        except (nx.NetworkXException, ZeroDivisionError):
             # Handle disconnected graphs or empty graphs
             betweenness = {node: 0.0 for node in graph.nodes()}
         
         # Eigenvector centrality (may fail for disconnected graphs)
         try:
             eigenvector = nx.eigenvector_centrality(graph, max_iter=1000)
-        except (nx.PowerIterationFailedConvergence, nx.NetworkXError):
+        except (nx.NetworkXException, ZeroDivisionError):
             # Fallback: use PageRank as alternative for problematic graphs
             try:
                 eigenvector = nx.pagerank(graph, max_iter=1000)
-            except (nx.NetworkXError, ZeroDivisionError):
+            except (nx.NetworkXException, ZeroDivisionError):
                 eigenvector = {node: 0.0 for node in graph.nodes()}
         
         # Closeness centrality
         try:
             closeness = nx.closeness_centrality(graph)
-        except (nx.NetworkXError, ZeroDivisionError):
+        except (nx.NetworkXException, ZeroDivisionError):
             closeness = {node: 0.0 for node in graph.nodes()}
         
         # Build NodeMetrics list
@@ -521,6 +525,7 @@ class GraphBuilder:
             Dictionary mapping node_id to community_id
         """
         try:
+            import networkx as nx
             import networkx.algorithms.community as nx_comm
             
             # Convert to undirected for community detection
