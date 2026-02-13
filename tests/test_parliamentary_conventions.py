@@ -291,6 +291,5 @@ class TestIntegration:
 
         # Regular mention extraction should not include "point of order" as an MP mention
         mentions = extractor.extract_mentions(transcript)
-        # Should not create any resolved mention for "point of order" itself
-        # (Speaker reference would be a separate pattern)
-        # This test ensures Point of Order is handled specially
+        point_of_order_mentions = [m for m in mentions if "point of order" in m.raw_mention.lower()]
+        assert len(point_of_order_mentions) == 0, "Point of order should not create MP mentions"

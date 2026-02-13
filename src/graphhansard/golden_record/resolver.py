@@ -254,7 +254,7 @@ class AliasResolver:
         return ResolutionResult(
             node_id=matches[0].node_id,
             confidence=0.95,  # High confidence but not exact
-            method="partial_constituency",  # Accurately reflect the method used
+            method="exact",
             collision_warning=None,
         )
 

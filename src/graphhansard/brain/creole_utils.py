@@ -187,9 +187,9 @@ def strip_honorific_prefix(text: str) -> str:
         # "the honourable member for" -> keep "Member for"
         (r"^(?:The\s+)?honourable\s+(?=member\s+for)", ""),
         # "the honourable member/gentleman/lady" (not followed by "for") -> remove all
-        (r"^(?:The\s+)?honourable\s+(?:member|gentleman|lady)\s+", ""),
+        (r"^(?:The\s+)?honourable\s+(?:member|gentleman|lady)(?:\s+|$)", ""),
         # "my honourable friend/member/colleague" -> remove all
-        (r"^(?:My\s+)?honourable\s+(?:friend|member|colleague)\s+", ""),
+        (r"^(?:My\s+)?honourable\s+(?:friend|member|colleague)(?:\s+|$)", ""),
         # "The Honourable" or "the honourable" 
         (r"^(?:The\s+)?Honourable\s+", ""),
         # "The Hon." or "Hon."

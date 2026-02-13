@@ -323,6 +323,8 @@ class EntityExtractor:
         mentions = []
 
         for pattern_name, pattern in self.PATTERNS.items():
+            if pattern_name == "point_of_order":
+                continue  # Handled by detect_point_of_order(), not as MP mention
             for match in pattern.finditer(text):
                 # Get the full match as the mention
                 mention_text = match.group(0).strip()
