@@ -14,6 +14,13 @@ from pathlib import Path
 
 from graphhansard.brain.graph_builder import SessionGraph
 from graphhansard.dashboard.graph_viz import build_force_directed_graph
+from graphhansard.dashboard.leaderboard import render_leaderboard
+from graphhansard.dashboard.timeline import discover_sessions, render_timeline, load_session_data
+from graphhansard.dashboard.mp_report_card import (
+    build_report_card,
+    render_report_card,
+    render_mp_selector,
+)
 
 
 def load_sample_graph() -> SessionGraph | None:
@@ -34,10 +41,31 @@ def main():
         layout="wide",
     )
 
+    # Check for MP Report Card URL parameter (MP-13)
+    query_params = st.query_params
+    mp_id_param = query_params.get("mp_id")
+    
+    # Initialize session state
+    if "selected_session" not in st.session_state:
+        st.session_state.selected_session = None
+    if "highlighted_node" not in st.session_state:
+        st.session_state.highlighted_node = None
+
     st.title("GraphHansard")
     st.subheader("Bahamian House of Assembly — Political Interaction Network")
 
     # Sidebar controls
+    st.sidebar.header("Navigation")
+    
+    # View selector
+    view_mode = st.sidebar.radio(
+        "Dashboard View",
+        options=["Graph Explorer", "Session Timeline", "MP Report Card"],
+        index=0,
+        help="Select dashboard view"
+    )
+    
+    st.sidebar.markdown("---")
     st.sidebar.header("Graph Controls")
     
     # Metric selector (MP-3)
@@ -58,12 +86,109 @@ def main():
     # Graph type selector (MP-1)
     graph_type = st.sidebar.radio(
         "Graph Type",
-        options=["Sample Session", "Single Session", "Cumulative"],
+        options=["Sample Session", "Timeline Sessions"],
         index=0,
         help="Select which graph to display"
     )
     
-    # Load and display graph
+    # === VIEW MODE: MP REPORT CARD (MP-13) ===
+    if view_mode == "MP Report Card" or mp_id_param:
+        st.markdown("---")
+        
+        # Discover sessions for report card
+        sessions = discover_sessions()
+        
+        if not sessions:
+            st.warning("No session data available. Generate sample data with `python examples/build_session_graph.py`")
+            return
+        
+        # Load all sessions for report card
+        session_graphs = []
+        for session_info in sessions:
+            if session_info.has_data:
+                data = load_session_data(session_info)
+                if data:
+                    session_graphs.append(SessionGraph(**data))
+        
+        if not session_graphs:
+            st.warning("Could not load session data.")
+            return
+        
+        # If MP ID provided in URL, use it directly
+        if mp_id_param:
+            selected_mp_id = mp_id_param
+        else:
+            # Otherwise show MP selector
+            selected_mp_id = render_mp_selector(session_graphs)
+        
+        if selected_mp_id:
+            # Build and render report card
+            report_card = build_report_card(selected_mp_id, session_graphs)
+            
+            if report_card:
+                render_report_card(report_card)
+            else:
+                st.error(f"No data found for MP: {selected_mp_id}")
+        
+        return
+    
+    # === VIEW MODE: SESSION TIMELINE (MP-12) ===
+    if view_mode == "Session Timeline":
+        st.markdown("---")
+        
+        # Discover available sessions
+        sessions = discover_sessions()
+        
+        # Callback for session selection
+        def on_session_select(session_info):
+            st.session_state.selected_session = session_info
+        
+        # Render timeline
+        selected_session = render_timeline(
+            sessions=sessions,
+            selected_session=st.session_state.selected_session,
+            on_session_select=on_session_select,
+        )
+        
+        # Update session state if changed
+        if selected_session:
+            st.session_state.selected_session = selected_session
+        
+        # Load and display selected session
+        if st.session_state.selected_session:
+            session_info = st.session_state.selected_session
+            st.markdown("---")
+            st.subheader(f"Session: {session_info.display_date}")
+            
+            # Load session data
+            data = load_session_data(session_info)
+            if data:
+                session_graph = SessionGraph(**data)
+                
+                # Display session info
+                st.success(f"✅ Loaded {session_graph.session_id} ({session_graph.date})")
+                st.markdown(f"**{session_graph.node_count}** MPs, **{session_graph.edge_count}** interactions")
+                
+                # Build force-directed graph
+                with st.spinner("Rendering force-directed graph..."):
+                    net = build_force_directed_graph(
+                        session_graph,
+                        metric=metric,
+                        use_blue_for_fnm=use_blue_for_fnm,
+                        height="600px",
+                        width="100%",
+                    )
+                    
+                    html_content = net.generate_html()
+                    components.html(html_content, height=650, scrolling=True)
+            else:
+                st.error(f"Could not load data for session: {session_info.session_id}")
+        
+        return
+    
+    # === VIEW MODE: GRAPH EXPLORER (default with leaderboard) ===
+    
+    # === VIEW MODE: GRAPH EXPLORER (default with leaderboard) ===
     if graph_type == "Sample Session":
         session_graph = load_sample_graph()
         
@@ -76,19 +201,31 @@ def main():
             st.success(f"✅ Loaded {session_graph.session_id} ({session_graph.date})")
             st.markdown(f"**{session_graph.node_count}** MPs, **{session_graph.edge_count}** interactions")
             
-            # Build force-directed graph (MP-1 through MP-4)
-            with st.spinner("Rendering force-directed graph..."):
-                net = build_force_directed_graph(
-                    session_graph,
-                    metric=metric,
-                    use_blue_for_fnm=use_blue_for_fnm,
-                    height="750px",
-                    width="100%",
-                )
+            # Create two columns: main graph and sidebar leaderboard
+            col_graph, col_leaderboard = st.columns([3, 1])
+            
+            with col_graph:
+                # Build force-directed graph (MP-1 through MP-4)
+                with st.spinner("Rendering force-directed graph..."):
+                    net = build_force_directed_graph(
+                        session_graph,
+                        metric=metric,
+                        use_blue_for_fnm=use_blue_for_fnm,
+                        height="750px",
+                        width="100%",
+                    )
+                    
+                    # Render to HTML in memory (no temp file needed)
+                    html_content = net.generate_html()
+                    components.html(html_content, height=800, scrolling=True)
+            
+            with col_leaderboard:
+                # Render Leaderboard (MP-10)
+                def on_mp_click(node_id):
+                    st.session_state.highlighted_node = node_id
+                    st.info(f"Node highlighted: {node_id}")
                 
-                # Render to HTML in memory (no temp file needed)
-                html_content = net.generate_html()
-                components.html(html_content, height=800, scrolling=True)
+                render_leaderboard(session_graph, on_mp_click=on_mp_click)
             
             # Display legend
             st.markdown("---")
@@ -133,17 +270,14 @@ def main():
             
             st.dataframe(metrics_data, use_container_width=True)
     
-    elif graph_type == "Single Session":
-        st.info(
-            "📋 **Single Session graphs coming soon.**\n\n"
-            "This will allow you to select any parliamentary session and view its interaction network."
-        )
-    
-    elif graph_type == "Cumulative":
-        st.info(
-            "📋 **Cumulative graphs coming soon.**\n\n"
-            "This will aggregate multiple sessions to show overall patterns across a date range."
-        )
+    elif graph_type == "Timeline Sessions":
+        # Redirect to timeline view
+        st.info("📋 Switch to **Session Timeline** view in the sidebar to explore sessions over time.")
+        st.markdown("The Session Timeline view provides:")
+        st.markdown("- 📅 Horizontal timeline of all available sessions")
+        st.markdown("- 🔍 Session selection and graph visualization")
+        st.markdown("- ⏮️ Previous/Next navigation")
+        st.markdown("- ✅ Visual indicators for data availability")
 
 
 if __name__ == "__main__":
