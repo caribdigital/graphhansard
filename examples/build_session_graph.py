@@ -127,7 +127,7 @@ def main():
             n.common_name for n in session_graph.nodes 
             if n.node_id == edge.target_node_id
         )
-        sentiment_str = f"{edge.net_sentiment:+.2f} ({edge.positive_count}+ {edge.neutral_count}= {edge.negative_count}-)"
+        sentiment_str = f"{edge.net_sentiment:+.2f} ({edge.positive_count}+, {edge.neutral_count}=, {edge.negative_count}-)"
         print(
             f"{source_name:<25} {target_name:<25} "
             f"{edge.total_mentions:<10} {sentiment_str:<15}"

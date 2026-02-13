@@ -224,7 +224,7 @@ class GraphBuilder:
             neu = agg["neutral_count"]
             
             # Calculate net sentiment (BR-23)
-            net_sentiment = (pos - neg) / total if total > 0 else 0.0
+            net_sentiment = self._calculate_net_sentiment(pos, neg, total)
             
             edge_record = EdgeRecord(
                 source_node_id=source,
@@ -291,23 +291,24 @@ class GraphBuilder:
         # Betweenness centrality
         try:
             betweenness = nx.betweenness_centrality(graph)
-        except Exception:
+        except (nx.NetworkXError, ZeroDivisionError):
+            # Handle disconnected graphs or empty graphs
             betweenness = {node: 0.0 for node in graph.nodes()}
         
         # Eigenvector centrality (may fail for disconnected graphs)
         try:
             eigenvector = nx.eigenvector_centrality(graph, max_iter=1000)
-        except Exception:
-            # Fallback: use PageRank as alternative
+        except (nx.PowerIterationFailedConvergence, nx.NetworkXError):
+            # Fallback: use PageRank as alternative for problematic graphs
             try:
                 eigenvector = nx.pagerank(graph, max_iter=1000)
-            except Exception:
+            except (nx.NetworkXError, ZeroDivisionError):
                 eigenvector = {node: 0.0 for node in graph.nodes()}
         
         # Closeness centrality
         try:
             closeness = nx.closeness_centrality(graph)
-        except Exception:
+        except (nx.NetworkXError, ZeroDivisionError):
             closeness = {node: 0.0 for node in graph.nodes()}
         
         # Build NodeMetrics list
@@ -332,6 +333,23 @@ class GraphBuilder:
             metrics.append(node_metric)
         
         return metrics
+
+    def _calculate_net_sentiment(
+        self, positive_count: int, negative_count: int, total_count: int
+    ) -> float:
+        """Calculate net sentiment score (BR-23).
+        
+        Args:
+            positive_count: Number of positive mentions
+            negative_count: Number of negative mentions
+            total_count: Total number of mentions
+            
+        Returns:
+            Net sentiment: (positive - negative) / total
+        """
+        if total_count == 0:
+            return 0.0
+        return (positive_count - negative_count) / total_count
 
     def _assign_structural_roles(
         self, node_metrics: list[NodeMetrics]
@@ -449,7 +467,7 @@ class GraphBuilder:
             neg = agg["negative_count"]
             neu = agg["neutral_count"]
             
-            net_sentiment = (pos - neg) / total if total > 0 else 0.0
+            net_sentiment = self._calculate_net_sentiment(pos, neg, total)
             
             edge_record = EdgeRecord(
                 source_node_id=source,
@@ -518,8 +536,8 @@ class GraphBuilder:
                     node_to_community[node] = community_id
             
             return node_to_community
-        except Exception:
-            # Fallback: assign all to community 0
+        except (ImportError, AttributeError, nx.NetworkXError):
+            # Fallback: assign all to community 0 if Louvain not available
             return {node: 0 for node in graph.nodes()}
 
     def export_graphml(self, graph: "nx.DiGraph", output_path: str) -> None:
