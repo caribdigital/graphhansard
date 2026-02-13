@@ -43,6 +43,25 @@ class MentionRecord(BaseModel):
         default=False, 
         description="True if speaker refers to themselves (BR-15)"
     )
+    
+    def to_graph_dict(self, sentiment_label: str | None = None) -> dict:
+        """Convert to dict format for GraphBuilder.
+        
+        Args:
+            sentiment_label: Optional sentiment label ("positive", "neutral", "negative")
+            
+        Returns:
+            Dictionary with fields needed by GraphBuilder
+        """
+        result = {
+            "source_node_id": self.source_node_id,
+            "target_node_id": self.target_node_id,
+            "context_window": self.context_window,
+            "is_self_reference": self.is_self_reference,
+        }
+        if sentiment_label is not None:
+            result["sentiment_label"] = sentiment_label
+        return result
 
 
 class EntityExtractor:

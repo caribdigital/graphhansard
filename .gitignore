@@ -42,6 +42,7 @@ contributions_queue.json
 
 # Export outputs (generated files)
 exports/
+output/
 
 # Model weights and caches (too large for git)
 models/
