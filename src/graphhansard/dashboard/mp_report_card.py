@@ -34,7 +34,7 @@ class MPReportCard:
         session_id: str,
         date: str,
         metrics: NodeMetrics,
-        edges: list[dict],
+        edges: list[EdgeRecord],
     ) -> None:
         """Add session data for this MP.
         

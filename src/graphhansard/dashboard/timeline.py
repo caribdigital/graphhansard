@@ -53,6 +53,14 @@ class SessionInfo:
         except (ValueError, AttributeError):
             return self.date
 
+    def __eq__(self, other):
+        if not isinstance(other, SessionInfo):
+            return NotImplemented
+        return self.session_id == other.session_id
+
+    def __hash__(self):
+        return hash(self.session_id)
+
 
 def discover_sessions(
     sessions_dir: str = "output",
