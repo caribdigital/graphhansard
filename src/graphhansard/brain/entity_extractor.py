@@ -51,6 +51,9 @@ class EntityExtractor:
     - Context window extraction (±1 sentence)
     - Precision ≥80% and Recall ≥85% target
 
+    Respects audio quality flags per BC-9 and BC-10: segments flagged
+    with exclude_from_extraction will not produce MentionRecords.
+
     See SRD §8.3 for specification.
     """
 
@@ -146,6 +149,9 @@ class EntityExtractor:
     def extract_mentions(self, transcript: dict, debate_date: str | None = None) -> list[MentionRecord]:
         """Extract all MP mentions from a diarized transcript.
 
+        Per BC-9 and BC-10, segments with exclude_from_extraction=True
+        will be skipped and produce no MentionRecords.
+
         Args:
             transcript: DiarizedTranscript dict with session_id and segments
             debate_date: ISO date string for temporal resolution (e.g., "2023-11-15")
@@ -155,20 +161,20 @@ class EntityExtractor:
         """
         session_id = transcript.get("session_id", "unknown")
         segments = transcript.get("segments", [])
-        
+
         all_mentions = []
-        
+
         for idx, segment in enumerate(segments):
             # Extract mentions from this segment
             segment_mentions = self._extract_from_segment(
                 segment, idx, session_id, segments, debate_date
             )
             all_mentions.extend(segment_mentions)
-        
+
         return all_mentions
 
     def _extract_from_segment(
-        self, segment: dict, segment_index: int, session_id: str, 
+        self, segment: dict, segment_index: int, session_id: str,
         all_segments: list[dict], debate_date: str | None
     ) -> list[MentionRecord]:
         """Extract mentions from a single transcript segment.
@@ -191,25 +197,25 @@ class EntityExtractor:
         # Skip if empty text
         if not text.strip():
             return []
-        
+
         mentions = []
-        
+
         # Phase 1: Pattern matching (BR-9)
         pattern_mentions = self._extract_pattern_mentions(text)
-        
+
         # Phase 2: spaCy NER (if enabled)
         ner_mentions = []
         if self.use_spacy and self.nlp:
             ner_mentions = self._extract_ner_mentions(text)
-        
+
         # Combine and deduplicate mentions
         all_raw_mentions = self._deduplicate_mentions(pattern_mentions + ner_mentions)
-        
+
         # Resolve each mention and create MentionRecord
         for raw_mention, char_start, char_end in all_raw_mentions:
             # Resolve via Golden Record (BR-10)
             resolution = self.resolver.resolve(raw_mention, debate_date)
-            
+
             # Determine resolution method based on resolver output
             if resolution.method == "exact":
                 res_method = ResolutionMethod.EXACT
@@ -217,17 +223,17 @@ class EntityExtractor:
                 res_method = ResolutionMethod.FUZZY
             else:
                 res_method = ResolutionMethod.UNRESOLVED
-            
+
             # Extract context window (±1 sentence) (BR-12)
             context = self._extract_context_window(
                 segment_index, all_segments, char_start, char_end
             )
-            
+
             # Estimate mention timestamps (proportional to character position)
             mention_start, mention_end = self._estimate_mention_timestamps(
                 text, char_start, char_end, start_time, end_time
             )
-            
+
             mention_record = MentionRecord(
                 session_id=session_id,
                 source_node_id=source_node_id,
@@ -240,15 +246,15 @@ class EntityExtractor:
                 context_window=context,
                 segment_index=segment_index,
             )
-            
+
             mentions.append(mention_record)
-            
+
             # Log unresolved mentions for human review (BR-12)
             if resolution.node_id is None:
                 self._log_unresolved_mention(
                     raw_mention, session_id, segment_index, debate_date, context
                 )
-        
+
         return mentions
 
     def _extract_pattern_mentions(self, text: str) -> list[tuple[str, int, int]]:
@@ -258,13 +264,13 @@ class EntityExtractor:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
-        
+
         for pattern_name, pattern in self.PATTERNS.items():
             for match in pattern.finditer(text):
                 # Get the full match as the mention
                 mention_text = match.group(0).strip()
                 char_start = match.start()
-                
+
                 # Clean up the mention - stop at stop words
                 words = mention_text.split()
                 cleaned_words = []
@@ -273,14 +279,14 @@ class EntityExtractor:
                     if word_lower in self.STOP_WORDS:
                         break
                     cleaned_words.append(word)
-                
+
                 mention_text = ' '.join(cleaned_words).strip()
                 char_end = char_start + len(mention_text)
-                
+
                 # Only add if mention is substantial (at least 5 chars)
                 if len(mention_text) >= 5:
                     mentions.append((mention_text, char_start, char_end))
-        
+
         return mentions
 
     def _extract_ner_mentions(self, text: str) -> list[tuple[str, int, int]]:
@@ -291,21 +297,21 @@ class EntityExtractor:
         """
         if not self.nlp:
             return []
-        
+
         mentions = []
         doc = self.nlp(text)
-        
+
         for ent in doc.ents:
             # Extract PERSON entities and parliamentary TITLE entities
             if ent.label_ in ("PERSON", "TITLE"):
                 mention_text = ent.text.strip()
                 char_start = ent.start_char
                 char_end = ent.end_char
-                
+
                 # Filter out very short mentions (likely false positives)
                 if len(mention_text) >= 3:
                     mentions.append((mention_text, char_start, char_end))
-        
+
         return mentions
 
     def _deduplicate_mentions(
@@ -317,25 +323,25 @@ class EntityExtractor:
         """
         if not mentions:
             return []
-        
+
         # Sort by start position, then by length (descending)
         sorted_mentions = sorted(mentions, key=lambda x: (x[1], -(x[2] - x[1])))
-        
+
         deduplicated = []
         last_end = -1
-        
+
         for mention, start, end in sorted_mentions:
             # Skip if this mention overlaps with the previous one
             if start < last_end:
                 continue
-            
+
             deduplicated.append((mention, start, end))
             last_end = end
-        
+
         return deduplicated
 
     def _extract_context_window(
-        self, segment_index: int, all_segments: list[dict], 
+        self, segment_index: int, all_segments: list[dict],
         char_start: int, char_end: int
     ) -> str:
         """Extract ±1 sentence context around mention (BR-12).
@@ -351,25 +357,25 @@ class EntityExtractor:
         """
         current_segment = all_segments[segment_index]
         text = current_segment.get("text", "")
-        
+
         # Simple sentence splitting (can be improved with spaCy)
         sentences = self._split_sentences(text)
-        
+
         # Find which sentence contains the mention
         char_pos = 0
         mention_sentence_idx = 0
-        
+
         for idx, sentence in enumerate(sentences):
             sentence_end = char_pos + len(sentence)
             if char_pos <= char_start < sentence_end:
                 mention_sentence_idx = idx
                 break
             char_pos = sentence_end
-        
+
         # Extract ±1 sentence
         start_idx = max(0, mention_sentence_idx - 1)
         end_idx = min(len(sentences), mention_sentence_idx + 2)
-        
+
         context_sentences = sentences[start_idx:end_idx]
         return " ".join(context_sentences).strip()
 
@@ -381,15 +387,15 @@ class EntityExtractor:
         # Simple split on .!? followed by space and capital letter
         sentence_pattern = re.compile(r'(?<=[.!?])\s+(?=[A-Z])')
         sentences = sentence_pattern.split(text)
-        
+
         # If no sentences found, return the whole text
         if not sentences or len(sentences) == 1:
             return [text]
-        
+
         return [s.strip() for s in sentences if s.strip()]
 
     def _estimate_mention_timestamps(
-        self, text: str, char_start: int, char_end: int, 
+        self, text: str, char_start: int, char_end: int,
         segment_start: float, segment_end: float
     ) -> tuple[float, float]:
         """Estimate timestamps for a mention within a segment.
@@ -399,16 +405,16 @@ class EntityExtractor:
         text_length = len(text)
         if text_length == 0:
             return segment_start, segment_end
-        
+
         segment_duration = segment_end - segment_start
-        
+
         # Calculate proportional timestamps
         start_ratio = char_start / text_length
         end_ratio = char_end / text_length
-        
+
         mention_start = segment_start + (start_ratio * segment_duration)
         mention_end = segment_start + (end_ratio * segment_duration)
-        
+
         return mention_start, mention_end
 
     def resolve_coreference(

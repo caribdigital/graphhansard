@@ -1,15 +1,17 @@
 """Stage 1 Pipeline — Complete transcription and diarization pipeline.
 
 Orchestrates Whisper transcription with pyannote diarization to produce
-structured, speaker-attributed transcripts. See SRD §8.2.
+structured, speaker-attributed transcripts. Includes audio quality analysis
+per BC-8, BC-9, BC-10. See SRD §8.2 and §11.3.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
-from typing import Any
 
+from graphhansard.brain.audio_quality import AudioQualityAnalyzer
 from graphhansard.brain.diarizer import Diarizer
 from graphhansard.brain.transcriber import (
     DiarizedTranscript,
@@ -17,6 +19,8 @@ from graphhansard.brain.transcriber import (
     TranscriptSegment,
     WordToken,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TranscriptionPipeline:
@@ -26,6 +30,7 @@ class TranscriptionPipeline:
     1. Transcribe audio using Whisper
     2. Perform speaker diarization using pyannote
     3. Align and merge results to produce speaker-attributed segments
+    4. Analyze audio quality and flag low-quality/hot-mic segments (BC-8, BC-9, BC-10)
     """
 
     def __init__(
@@ -33,17 +38,27 @@ class TranscriptionPipeline:
         transcriber: Transcriber | None = None,
         diarizer: Diarizer | None = None,
         use_whisperx: bool = True,
+        quality_analyzer: AudioQualityAnalyzer | None = None,
+        enable_quality_analysis: bool = True,
     ):
         """Initialize the pipeline.
 
         Args:
             transcriber: Transcriber instance. If None, creates default.
-            diarizer: Diarizer instance. If None, creates default (requires HF_TOKEN).
-            use_whisperx: Whether to use WhisperX for advanced alignment (recommended).
+            diarizer: Diarizer instance. If None, creates default
+                (requires HF_TOKEN).
+            use_whisperx: Whether to use WhisperX for advanced alignment
+                (recommended).
+            quality_analyzer: AudioQualityAnalyzer instance. If None,
+                creates default.
+            enable_quality_analysis: Whether to perform audio quality
+                analysis (BC-8, BC-9, BC-10).
         """
         self.transcriber = transcriber or Transcriber()
         self.diarizer = diarizer
         self.use_whisperx = use_whisperx
+        self.quality_analyzer = quality_analyzer or AudioQualityAnalyzer()
+        self.enable_quality_analysis = enable_quality_analysis
 
     def process(
         self,
@@ -54,6 +69,8 @@ class TranscriptionPipeline:
     ) -> DiarizedTranscript:
         """Process an audio file through the complete pipeline.
 
+        Includes audio quality analysis per BC-8, BC-9, BC-10.
+
         Args:
             audio_path: Path to audio file
             session_id: Unique session identifier
@@ -61,7 +78,7 @@ class TranscriptionPipeline:
             enable_diarization: Whether to perform speaker diarization
 
         Returns:
-            DiarizedTranscript with speaker-attributed segments
+            DiarizedTranscript with speaker-attributed segments and quality flags
         """
         # Step 1: Transcribe audio
         transcript_result = self.transcriber.transcribe(
@@ -75,7 +92,7 @@ class TranscriptionPipeline:
                 aligned_result = self.diarizer.align_with_whisperx(
                     audio_path, transcript_result, language=language
                 )
-                return self._convert_whisperx_to_transcript(
+                transcript = self._convert_whisperx_to_transcript(
                     aligned_result, session_id
                 )
             else:
@@ -84,12 +101,52 @@ class TranscriptionPipeline:
                 aligned_segments = self.diarizer.align_with_transcript(
                     diarization, transcript_result["segments"]
                 )
-                return self._convert_to_transcript(aligned_segments, session_id)
+                transcript = self._convert_to_transcript(aligned_segments, session_id)
         else:
             # No diarization - return transcript with UNKNOWN speaker
-            return self._convert_to_transcript(
+            transcript = self._convert_to_transcript(
                 transcript_result["segments"], session_id, default_speaker="UNKNOWN"
             )
+
+        # Step 3: Perform audio quality analysis (BC-8, BC-9, BC-10)
+        if self.enable_quality_analysis:
+            self._apply_quality_analysis(transcript, audio_path)
+
+        return transcript
+
+    def _apply_quality_analysis(
+        self, transcript: DiarizedTranscript, audio_path: str
+    ) -> None:
+        """Apply audio quality analysis to transcript segments.
+
+        Updates segments in-place with quality flags per BC-8, BC-9, BC-10.
+
+        Args:
+            transcript: DiarizedTranscript to analyze
+            audio_path: Path to audio file for detailed analysis
+        """
+        logger.info(
+            f"Performing audio quality analysis on "
+            f"{len(transcript.segments)} segments"
+        )
+
+        # Analyze all segments
+        quality_metrics = self.quality_analyzer.analyze_session(
+            transcript.segments, audio_path
+        )
+
+        # Apply quality metadata to segments
+        for segment, metrics in zip(transcript.segments, quality_metrics):
+            segment.quality_flag = metrics.quality_flag.value
+            segment.snr_db = metrics.snr_db
+            segment.exclude_from_extraction = metrics.exclude_from_extraction
+
+        # Log summary
+        excluded = sum(1 for s in transcript.segments if s.exclude_from_extraction)
+        logger.info(
+            f"Quality analysis complete: {excluded}/{len(transcript.segments)} "
+            f"segments flagged for exclusion"
+        )
 
     def _convert_to_transcript(
         self,
@@ -153,7 +210,9 @@ class TranscriptionPipeline:
                             word=word_data.get("word", word_data.get("text", "")),
                             start=word_data["start"],
                             end=word_data["end"],
-                            confidence=word_data.get("score", word_data.get("confidence", 1.0)),
+                            confidence=word_data.get(
+                                "score", word_data.get("confidence", 1.0)
+                            ),
                         )
                     )
 
@@ -244,6 +303,8 @@ def create_pipeline(
     hf_token: str | None = None,
     use_whisperx: bool = True,
     backend: str = "faster-whisper",
+    enable_quality_analysis: bool = True,
+    snr_threshold_db: float = 10.0,
 ) -> TranscriptionPipeline:
     """Factory function to create a configured pipeline.
 
@@ -252,7 +313,12 @@ def create_pipeline(
         device: Device to run on ("cuda" or "cpu")
         hf_token: HuggingFace token for pyannote (required for diarization)
         use_whisperx: Whether to use WhisperX alignment
-        backend: Transcription backend ("faster-whisper" or "insanely-fast-whisper")
+        backend: Transcription backend
+            ("faster-whisper" or "insanely-fast-whisper")
+        enable_quality_analysis: Whether to enable audio quality analysis
+            (BC-8, BC-9, BC-10)
+        snr_threshold_db: SNR threshold in dB for quality flagging
+            (default: 10.0 per BC-9)
 
     Returns:
         Configured TranscriptionPipeline instance
@@ -265,6 +331,14 @@ def create_pipeline(
     if hf_token:
         diarizer = Diarizer(hf_token=hf_token, device=device)
 
+    quality_analyzer = None
+    if enable_quality_analysis:
+        quality_analyzer = AudioQualityAnalyzer(snr_threshold_db=snr_threshold_db)
+
     return TranscriptionPipeline(
-        transcriber=transcriber, diarizer=diarizer, use_whisperx=use_whisperx
+        transcriber=transcriber,
+        diarizer=diarizer,
+        use_whisperx=use_whisperx,
+        quality_analyzer=quality_analyzer,
+        enable_quality_analysis=enable_quality_analysis,
     )

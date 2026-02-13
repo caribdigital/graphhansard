@@ -7,7 +7,6 @@ output via whisperx alignment. See SRD §8.2 (BR-2, BR-5, BR-7).
 from __future__ import annotations
 
 import os
-from typing import Any
 
 
 class Diarizer:

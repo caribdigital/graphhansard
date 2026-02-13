@@ -518,3 +518,70 @@ class TestBahamianCreoleTranscription:
 
         mock_normalize.assert_called_once_with("da Member spoke")
         assert result["segments"][0]["text"] == "the Member spoke"
+
+
+class TestAudioQualityIntegration:
+    """Test audio quality integration with pipeline."""
+
+    def test_pipeline_with_quality_analysis_enabled(self):
+        """Test pipeline initializes with quality analysis."""
+        from graphhansard.brain.audio_quality import AudioQualityAnalyzer
+
+        pipeline = TranscriptionPipeline(enable_quality_analysis=True)
+        assert pipeline.enable_quality_analysis
+        assert pipeline.quality_analyzer is not None
+        assert isinstance(pipeline.quality_analyzer, AudioQualityAnalyzer)
+
+    def test_pipeline_with_quality_analysis_disabled(self):
+        """Test pipeline can disable quality analysis."""
+        pipeline = TranscriptionPipeline(enable_quality_analysis=False)
+        assert not pipeline.enable_quality_analysis
+
+    def test_transcript_segment_with_quality_fields(self):
+        """Test TranscriptSegment includes quality metadata fields."""
+        segment = TranscriptSegment(
+            speaker_label="SPEAKER_00",
+            start_time=0.0,
+            end_time=5.0,
+            text="Test",
+            confidence=0.9,
+            quality_flag="ok",
+            snr_db=15.0,
+            exclude_from_extraction=False,
+        )
+        assert segment.quality_flag == "ok"
+        assert segment.snr_db == 15.0
+        assert not segment.exclude_from_extraction
+
+    def test_transcript_segment_quality_fields_optional(self):
+        """Test quality fields are optional (backward compatibility)."""
+        segment = TranscriptSegment(
+            speaker_label="SPEAKER_00",
+            start_time=0.0,
+            end_time=5.0,
+            text="Test",
+            confidence=0.9,
+        )
+        assert segment.quality_flag is None
+        assert segment.snr_db is None
+        assert not segment.exclude_from_extraction
+
+    def test_create_pipeline_with_quality_options(self):
+        """Test create_pipeline with quality analysis options."""
+        pipeline = create_pipeline(
+            device="cpu",
+            hf_token=None,
+            enable_quality_analysis=True,
+            snr_threshold_db=12.0,
+        )
+        assert pipeline.enable_quality_analysis
+        assert pipeline.quality_analyzer.snr_threshold_db == 12.0
+
+    def test_create_pipeline_without_quality_analysis(self):
+        """Test create_pipeline without quality analysis."""
+        pipeline = create_pipeline(
+            device="cpu",
+            hf_token=None,
+            enable_quality_analysis=False,
+        )
+        assert not pipeline.enable_quality_analysis
