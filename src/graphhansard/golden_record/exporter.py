@@ -89,9 +89,10 @@ class GoldenRecordExporter:
             ])
             writer.writerow([f"# Total MPs: {len(self.golden_record.mps)}"])
             writer.writerow([])  # Blank line
-            writer.writerow(["# DISCLAIMER: Network metrics are descriptive statistics derived from parliamentary proceedings."])
-            writer.writerow(["# They do not imply wrongdoing, incompetence, or endorsement."])
-            writer.writerow(["# See methodology documentation for limitations."])
+            # NF-18: Disclaimer (written as plain text with # prefix to avoid CSV quoting)
+            f.write("# DISCLAIMER: Network metrics are descriptive statistics derived from parliamentary proceedings.\n")
+            f.write("# They do not imply wrongdoing, incompetence, or endorsement.\n")
+            f.write("# See methodology documentation for limitations.\n")
             writer.writerow([])  # Blank line
 
             # Write header row

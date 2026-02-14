@@ -8,21 +8,25 @@ See SRD §9 (Layer 3 — The Map) for specification.
 from __future__ import annotations
 
 import json
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
-from pathlib import Path
 from rapidfuzz import fuzz
 
 from graphhansard.brain.graph_builder import SessionGraph
 from graphhansard.dashboard.graph_viz import build_force_directed_graph
 from graphhansard.dashboard.leaderboard import render_leaderboard
-from graphhansard.dashboard.timeline import discover_sessions, render_timeline, load_session_data
 from graphhansard.dashboard.mp_report_card import (
     build_report_card,
-    render_report_card,
     render_mp_selector,
+    render_report_card,
 )
-
+from graphhansard.dashboard.timeline import (
+    discover_sessions,
+    load_session_data,
+    render_timeline,
+)
 
 # Configuration constants
 FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
@@ -63,7 +67,6 @@ def filter_graph_by_party(
     Returns:
         Filtered SessionGraph
     """
-    from graphhansard.brain.graph_builder import EdgeRecord, NodeMetrics
 
     # Filter nodes by party
     filtered_nodes = [
@@ -183,7 +186,7 @@ def main():
 
     st.title("GraphHansard")
     st.subheader("Bahamian House of Assembly — Political Interaction Network")
-    
+
     # NF-18: Disclaimer
     st.info(
         "ℹ️ **Disclaimer:** Network metrics are descriptive statistics derived from parliamentary proceedings. "
@@ -279,7 +282,7 @@ def main():
     if view_mode == "About":
         st.markdown("---")
         st.header("📖 About GraphHansard")
-        
+
         st.markdown("""
         ## What is GraphHansard?
         
@@ -406,9 +409,9 @@ def main():
         *"The House is in session. The recorder is running. Let's map the noise."*  
         *— Dr. Aris Moncur*
         """)
-        
+
         return
-    
+
     # === VIEW MODE: MP REPORT CARD (MP-13) ===
     if view_mode == "MP Report Card" or mp_id_param:
         st.markdown("---")
