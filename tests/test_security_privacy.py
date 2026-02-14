@@ -65,10 +65,22 @@ class TestSecurityPrivacy:
                 f"MP {node_id} should not contain home address"
             )
 
-            # Verify no phone numbers (pattern: XXX-XXX-XXXX or similar)
-            phone_pattern = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
-            assert not re.search(phone_pattern, mp_str), (
-                f"MP {node_id} should not contain phone numbers"
+            # Verify no phone numbers (comprehensive patterns)
+            # North American format
+            phone_pattern_na = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
+            # International format
+            phone_pattern_intl = r'\+\d{1,3}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}'
+            # Bahamian format
+            phone_pattern_bs = r'\b242[-.\s]?\d{3}[-.\s]?\d{4}\b'
+            
+            assert not re.search(phone_pattern_na, mp_str), (
+                f"MP {node_id} should not contain phone numbers (NA format)"
+            )
+            assert not re.search(phone_pattern_intl, mp_str), (
+                f"MP {node_id} should not contain phone numbers (international format)"
+            )
+            assert not re.search(phone_pattern_bs, mp_str), (
+                f"MP {node_id} should not contain phone numbers (Bahamian format)"
             )
 
     def test_no_pii_in_source_code(self):
@@ -80,7 +92,12 @@ class TestSecurityPrivacy:
         # Patterns that should NOT appear in production code
         # (Excluding test files and examples)
         sensitive_patterns = [
-            (r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', "phone number"),  # Phone numbers
+            # North American format: XXX-XXX-XXXX or (XXX) XXX-XXXX
+            (r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b', "phone number (North American)"),
+            # International format: +XX XXX XXX XXXX or similar
+            (r'\+\d{1,3}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}', "phone number (international)"),
+            # Bahamian format: 242-XXX-XXXX
+            (r'\b242[-.\s]?\d{3}[-.\s]?\d{4}\b', "phone number (Bahamian)"),
         ]
 
         violations = []
