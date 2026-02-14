@@ -1,0 +1,36 @@
+# Streamlit Configuration for GraphHansard Dashboard
+# Implements MP-14 (Performance) and MP-15 (Responsiveness)
+
+[server]
+# Enable file watching for development
+fileWatcherType = "auto"
+# Increase max message size for large graphs
+maxMessageSize = 200
+
+[browser]
+# Optimize for responsiveness (MP-15)
+gatherUsageStats = false
+
+[theme]
+# Custom theme for better mobile/tablet experience
+primaryColor = "#FFD700"  # Gold (PLP color)
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[client]
+# Performance optimizations (MP-14)
+# Show a spinner during app reruns
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[runner]
+# Optimize caching and performance
+# Enable faster reruns
+fastReruns = true
+# Enforce fragment runs 
+enforceSerializableSessionState = false
+
+# Magic commands are disabled for production performance
+magicEnabled = false

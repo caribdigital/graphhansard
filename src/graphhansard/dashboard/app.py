@@ -33,8 +33,12 @@ FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
 GOLDEN_RECORD_PATH = "golden_record/mps.json"  # Relative to project root
 
 
+@st.cache_data(ttl=3600)  # Cache for 1 hour (MP-14: Performance)
 def load_sample_graph() -> SessionGraph | None:
-    """Load sample session graph if available."""
+    """Load sample session graph if available.
+    
+    Cached to improve load times per MP-14 requirement.
+    """
     sample_path = Path("output/sample_session_metrics.json")
     if sample_path.exists():
         with open(sample_path, "r") as f:
@@ -43,8 +47,12 @@ def load_sample_graph() -> SessionGraph | None:
     return None
 
 
+@st.cache_data(ttl=3600)  # Cache for 1 hour (MP-14: Performance)
 def load_golden_record() -> dict:
-    """Load Golden Record for MP search and alias resolution."""
+    """Load Golden Record for MP search and alias resolution.
+    
+    Cached to improve load times per MP-14 requirement.
+    """
     golden_record_path = Path(GOLDEN_RECORD_PATH)
     if golden_record_path.exists():
         with open(golden_record_path, "r") as f:
@@ -172,7 +180,68 @@ def main():
         page_title="GraphHansard — Bahamian Parliamentary Network",
         page_icon="🏛️",
         layout="wide",
+        initial_sidebar_state="expanded",  # MP-15: Better mobile experience
     )
+
+    # MP-15: Add responsive CSS for tablet and mobile support
+    st.markdown("""
+    <style>
+    /* Responsive design for MP-15 */
+    @media (max-width: 768px) {
+        /* Mobile: Stack elements vertically */
+        .stApp {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        .block-container {
+            padding: 1rem;
+        }
+        /* Make graphs scrollable on mobile */
+        iframe {
+            max-width: 100%;
+        }
+    }
+    
+    @media (min-width: 768px) and (max-width: 1200px) {
+        /* Tablet: Optimize layout */
+        .block-container {
+            padding: 2rem;
+        }
+    }
+    
+    @media (min-width: 1200px) {
+        /* Desktop: Full layout */
+        .block-container {
+            padding: 3rem;
+        }
+    }
+    
+    /* Prevent horizontal scrolling (MP-15) */
+    .main {
+        overflow-x: hidden;
+    }
+    
+    /* Touch-friendly controls (MP-15) */
+    .stButton > button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Performance: Reduce animations on low-end devices (MP-14) */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+    
+    /* Loading optimization (MP-14) */
+    .stSpinner {
+        text-align: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     # Check for MP Report Card URL parameter (MP-13)
     query_params = st.query_params
@@ -300,6 +369,18 @@ def main():
         - **The tone** of these interactions (positive, neutral, negative)
         - **Structural roles** of MPs within the debate network
         
+        ### How Data is Collected
+        
+        Our system follows a five-step process:
+        
+        1. **Audio Download**: We download publicly available parliamentary session recordings from YouTube
+        2. **Transcription**: We convert speech to text using AI models (OpenAI Whisper)
+        3. **Speaker Identification**: We identify which MP is speaking using our Golden Record database
+        4. **Mention Extraction**: We detect when one MP mentions another MP in their speech
+        5. **Network Analysis**: We build a graph and compute centrality metrics
+        
+        For a detailed technical explanation, see our [**Full Methodology Documentation**](https://github.com/caribdigital/graphhansard/blob/main/docs/methodology.md).
+        
         ### Our Principles
         
         1. **Open Data**: All source audio is from publicly available parliamentary recordings
@@ -344,17 +425,32 @@ def main():
         
         ## Understanding Network Metrics
         
+        ### How Metrics Are Computed
+        
+        We use standard graph theory algorithms from the NetworkX library to calculate these metrics:
+        
         ### Degree Centrality
-        How many connections an MP has (mentions made + mentions received)
+        How many connections an MP has (mentions made + mentions received).
+        
+        **Computation**: Simply count the edges connected to each MP node.
         
         ### Betweenness Centrality
-        How often an MP connects different groups ("bridge" role)
+        How often an MP connects different groups ("bridge" role).
+        
+        **Computation**: For each pair of MPs, we find the shortest path between them. 
+        If an MP appears on many shortest paths, they have high betweenness.
         
         ### Eigenvector Centrality
-        Whether an MP is connected to other well-connected MPs ("force multiplier" role)
+        Whether an MP is connected to other well-connected MPs ("force multiplier" role).
+        
+        **Computation**: An iterative algorithm that gives higher scores to MPs who are 
+        connected to other high-scoring MPs.
         
         ### Closeness Centrality
-        How "close" an MP is to all others in the network
+        How "close" an MP is to all others in the network.
+        
+        **Computation**: Calculate the average shortest path length from an MP to all other MPs. 
+        Shorter paths mean higher closeness.
         
         **Important**: These are descriptive statistics, not value judgments. There is no "best" 
         centrality score. Context matters.
