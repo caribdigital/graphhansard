@@ -270,7 +270,7 @@ def main():
         # MP-5: Display MP profile if node selected
         if selected_node and selected_node != "None":
             # Extract node_id from selection "Name (node_id)"
-            node_id = selected_node.split("(")[1].rstrip(")")
+            node_id = selected_node.rsplit("(", 1)[1].rstrip(")")
             display_mp_profile(node_id, session_graph)
         
         # MP-6: Display mention details if edge selected

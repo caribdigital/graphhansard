@@ -502,12 +502,14 @@ class GraphBuilder:
                         "positive_count": 0,
                         "neutral_count": 0,
                         "negative_count": 0,
+                        "mention_details": [],
                     }
 
                 edge_aggregations[key]["total_mentions"] += edge.total_mentions
                 edge_aggregations[key]["positive_count"] += edge.positive_count
                 edge_aggregations[key]["neutral_count"] += edge.neutral_count
                 edge_aggregations[key]["negative_count"] += edge.negative_count
+                edge_aggregations[key]["mention_details"].extend(edge.mention_details)
 
         # Build NetworkX graph
         G = nx.DiGraph()
@@ -539,6 +541,7 @@ class GraphBuilder:
                 neutral_count=neu,
                 negative_count=neg,
                 net_sentiment=net_sentiment,
+                mention_details=agg["mention_details"],
             )
             edges.append(edge_record)
 
