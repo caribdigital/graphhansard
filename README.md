@@ -200,15 +200,39 @@ Project Bay Street Graph — Golden Record v1.0 Diagnostic
 
 ## Interactive Dashboard
 
-The GraphHansard dashboard provides an interactive force-directed graph visualization of parliamentary interactions:
+The GraphHansard dashboard provides an interactive force-directed graph visualization of parliamentary interactions with advanced analytics features:
 
-### Features (MP-1 through MP-4)
+### Features
+
+#### Core Visualization (MP-1 through MP-4)
 
 - **Force-Directed Layout**: MPs as nodes with physics-based positioning
 - **Party Colors**: PLP (gold), FNM (red/blue), COI (grey)
 - **Node Sizing**: Choose from degree, betweenness, eigenvector, or total mentions
 - **Edge Styling**: Thickness by mention count, color by sentiment (green/grey/red)
 - **Interactive Controls**: Pan, zoom, hover tooltips, metric selection
+
+#### 🏆 Leaderboard Panel (MP-10)
+
+- **Top 5 Rankings** by centrality metric (degree, betweenness, eigenvector, closeness)
+- **Structural Role Badges**: Force Multiplier ⚡, Bridge 🌉, Hub 🎯, Isolated 🏝️
+- **Clickable Entries**: Select any MP to highlight them in the graph
+- **Real-time Updates**: Dynamically reflects selected session
+
+#### 📅 Session Timeline (MP-12)
+
+- **Horizontal Timeline**: Navigate all parliamentary sessions by date
+- **Visual Indicators**: ✅ data available, ⏳ pending processing
+- **Previous/Next Navigation**: Browse sessions chronologically
+- **Auto-loading**: Selected session graph renders automatically
+
+#### 📊 MP Report Card (MP-13)
+
+- **Centrality Metrics Over Time**: Line charts tracking network position evolution
+- **Top Interaction Partners**: Ranked list of most frequent connections
+- **Sentiment Trend Analysis**: Net sentiment evolution with trend classification
+- **Structural Role Evolution**: Timeline of role changes across sessions
+- **Shareable URLs**: Direct links for journalists and civic organizations
 
 ### Quick Start
 
@@ -223,7 +247,19 @@ python examples/build_session_graph.py
 streamlit run src/graphhansard/dashboard/app.py
 ```
 
-See [`docs/graph_visualization_guide.md`](docs/graph_visualization_guide.md) for complete documentation.
+### Dashboard Views
+
+Navigate between three main views via the sidebar:
+
+- **Graph Explorer**: Interactive network with real-time leaderboard
+- **Session Timeline**: Temporal exploration of sessions
+- **MP Report Card**: Individual MP analysis over time
+
+### Documentation
+
+- Complete guide: [`docs/dashboard_features.md`](docs/dashboard_features.md)
+- Graph visualization: [`docs/graph_visualization_guide.md`](docs/graph_visualization_guide.md)
+- API reference: See module docstrings in `src/graphhansard/dashboard/`
 
 ---
 
@@ -236,6 +272,7 @@ See [`docs/graph_visualization_guide.md`](docs/graph_visualization_guide.md) for
 - [ ] **M-2.3** Entity extraction — mention logs from real sessions
 - [x] **M-2.5** Graph construction — session graphs with centrality metrics
 - [x] **M-3.1** Dashboard prototype — force-directed graph visualization (MP-1 through MP-4)
+- [x] **M-3.2** Advanced dashboard views — Leaderboard (MP-10), Timeline (MP-12), MP Report Cards (MP-13)
 - [ ] **M-3.4** Public beta launch
 
 See [SRD v1.0](docs/SRD_v1.0.md) for the full requirements document and timeline.
