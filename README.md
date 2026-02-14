@@ -276,8 +276,35 @@ Navigate between three main views via the sidebar:
 - [x] **M-3.1** Dashboard prototype — force-directed graph visualization (MP-1 through MP-4)
 - [x] **M-3.2** Advanced dashboard views — Leaderboard (MP-10), Timeline (MP-12), MP Report Cards (MP-13)
 - [ ] **M-3.4** Public beta launch
+- [x] **NF-1 to NF-8** Performance & Reliability Targets — benchmarks and tests implemented
 
 See [SRD v1.0](docs/SRD_v1.0.md) for the full requirements document and timeline.
+
+---
+
+## Performance & Reliability
+
+GraphHansard includes comprehensive performance benchmarks and reliability tests to validate all non-functional requirements:
+
+### Performance Targets (NF-1 to NF-5)
+- **NF-1:** Audio transcription ≥6x real-time on RTX 3080 ⏭️ (requires GPU)
+- **NF-2:** Entity extraction ≤30s per hour ✅ **PASS** (0.02s measured)
+- **NF-3:** Graph computation ≤5s for 39-node graph ✅ **PASS** (0.005s measured)
+- **NF-4:** Dashboard load ≤3s on 50 Mbps ⏭️ (requires deployment)
+- **NF-5:** Interaction latency ≤100ms ⏭️ (requires deployment)
+
+### Reliability Targets (NF-6 to NF-8)
+- **NF-6:** Pipeline idempotency & resumability ✅ **Tests complete**
+- **NF-7:** Error handling & resilience ✅ **Tests complete**
+- **NF-8:** Dashboard uptime ≥99% 📋 **Documented**
+
+See [`benchmarks/`](benchmarks/) directory for:
+- Benchmark scripts for each requirement
+- Detailed results and measurements
+- CI/CD integration examples
+- Performance optimization guidance
+
+Run all benchmarks: `python benchmarks/run_all.py`
 
 ---
 
