@@ -11,6 +11,7 @@ import json
 import streamlit as st
 import streamlit.components.v1 as components
 from pathlib import Path
+from rapidfuzz import fuzz
 
 from graphhansard.brain.graph_builder import SessionGraph
 from graphhansard.dashboard.graph_viz import build_force_directed_graph
@@ -23,6 +24,11 @@ from graphhansard.dashboard.mp_report_card import (
 )
 
 
+# Configuration constants
+FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
+GOLDEN_RECORD_PATH = "golden_record/mps.json"  # Relative to project root
+
+
 def load_sample_graph() -> SessionGraph | None:
     """Load sample session graph if available."""
     sample_path = Path("output/sample_session_metrics.json")
@@ -31,6 +37,130 @@ def load_sample_graph() -> SessionGraph | None:
             data = json.load(f)
             return SessionGraph(**data)
     return None
+
+
+def load_golden_record() -> dict:
+    """Load Golden Record for MP search and alias resolution."""
+    golden_record_path = Path(GOLDEN_RECORD_PATH)
+    if golden_record_path.exists():
+        with open(golden_record_path, "r") as f:
+            return json.load(f)
+    return {"mps": []}
+
+
+def filter_graph_by_party(
+    session_graph: SessionGraph,
+    selected_parties: list[str],
+    cross_party_only: bool
+) -> SessionGraph:
+    """Filter graph nodes and edges by party.
+
+    Args:
+        session_graph: Original session graph
+        selected_parties: List of party names to include (e.g., ["PLP", "FNM"])
+        cross_party_only: If True, only show edges between different parties
+
+    Returns:
+        Filtered SessionGraph
+    """
+    from graphhansard.brain.graph_builder import EdgeRecord, NodeMetrics
+
+    # Filter nodes by party
+    filtered_nodes = [
+        node for node in session_graph.nodes
+        if node.party in selected_parties
+    ]
+
+    # Get node IDs for filtering edges
+    node_ids = {node.node_id for node in filtered_nodes}
+
+    # Filter edges: both endpoints must be in filtered nodes
+    filtered_edges = []
+    for edge in session_graph.edges:
+        if edge.source_node_id in node_ids and edge.target_node_id in node_ids:
+            # Get party info for cross-party filtering
+            source_party = next(
+                (n.party for n in filtered_nodes if n.node_id == edge.source_node_id),
+                None
+            )
+            target_party = next(
+                (n.party for n in filtered_nodes if n.node_id == edge.target_node_id),
+                None
+            )
+
+            # If cross_party_only is enabled, only include edges between different parties
+            if cross_party_only:
+                if source_party != target_party:
+                    filtered_edges.append(edge)
+            else:
+                filtered_edges.append(edge)
+
+    # Create filtered graph
+    filtered_graph = SessionGraph(
+        session_id=session_graph.session_id,
+        date=session_graph.date,
+        graph_file=session_graph.graph_file,
+        node_count=len(filtered_nodes),
+        edge_count=len(filtered_edges),
+        nodes=filtered_nodes,
+        edges=filtered_edges,
+        modularity_score=session_graph.modularity_score,
+    )
+
+    return filtered_graph
+
+
+def search_mp(query: str, golden_record: dict, session_graph: SessionGraph) -> list[str]:
+    """Search for MPs by name, alias, or constituency using fuzzy matching.
+
+    Args:
+        query: Search query string
+        golden_record: Golden Record data with MP information
+        session_graph: Current session graph (for filtering to MPs in graph)
+
+    Returns:
+        List of matching node_ids
+    """
+    if not query:
+        return []
+
+    # Get MPs in current graph
+    graph_node_ids = {node.node_id for node in session_graph.nodes}
+
+    matches = []
+    query_lower = query.lower()
+
+    for mp in golden_record.get("mps", []):
+        node_id = mp.get("node_id")
+
+        # Only search MPs in current graph
+        if node_id not in graph_node_ids:
+            continue
+
+        # Check common name
+        common_name = mp.get("common_name", "")
+        if fuzz.partial_ratio(query_lower, common_name.lower()) >= FUZZY_MATCH_THRESHOLD:
+            matches.append(node_id)
+            continue
+
+        # Check full name
+        full_name = mp.get("full_name", "")
+        if fuzz.partial_ratio(query_lower, full_name.lower()) >= FUZZY_MATCH_THRESHOLD:
+            matches.append(node_id)
+            continue
+
+        # Check aliases
+        for alias in mp.get("aliases", []):
+            if fuzz.partial_ratio(query_lower, alias.lower()) >= FUZZY_MATCH_THRESHOLD:
+                matches.append(node_id)
+                break
+        else:
+            # Check constituency (only if no alias matched)
+            constituency = mp.get("constituency", "")
+            if fuzz.partial_ratio(query_lower, constituency.lower()) >= FUZZY_MATCH_THRESHOLD:
+                matches.append(node_id)
+
+    return list(set(matches))  # Remove duplicates
 
 
 def main():
@@ -44,7 +174,7 @@ def main():
     # Check for MP Report Card URL parameter (MP-13)
     query_params = st.query_params
     mp_id_param = query_params.get("mp_id")
-    
+
     # Initialize session state
     if "selected_session" not in st.session_state:
         st.session_state.selected_session = None
@@ -54,9 +184,12 @@ def main():
     st.title("GraphHansard")
     st.subheader("Bahamian House of Assembly — Political Interaction Network")
 
+    # Load Golden Record for search functionality
+    golden_record = load_golden_record()
+
     # Sidebar controls
     st.sidebar.header("Navigation")
-    
+
     # View selector
     view_mode = st.sidebar.radio(
         "Dashboard View",
@@ -64,10 +197,10 @@ def main():
         index=0,
         help="Select dashboard view"
     )
-    
+
     st.sidebar.markdown("---")
     st.sidebar.header("Graph Controls")
-    
+
     # Metric selector (MP-3)
     metric = st.sidebar.selectbox(
         "Node Size Metric",
@@ -75,14 +208,14 @@ def main():
         index=0,
         help="Select which metric to use for sizing nodes"
     )
-    
+
     # Party color toggle for FNM (MP-2)
     use_blue_for_fnm = st.sidebar.checkbox(
         "Use Blue for FNM (instead of Red)",
         value=False,
         help="Toggle FNM party color between Red and Blue"
     )
-    
+
     # Graph type selector (MP-1)
     graph_type = st.sidebar.radio(
         "Graph Type",
@@ -90,18 +223,63 @@ def main():
         index=0,
         help="Select which graph to display"
     )
-    
+
+    st.sidebar.markdown("---")
+
+    # MP-7: Date Range Filter
+    st.sidebar.header("📅 Date Range Filter (MP-7)")
+    date_filter_type = st.sidebar.selectbox(
+        "Filter Type",
+        options=["Full Term", "Single Session", "Date Range"],
+        index=0,
+        help="Select date filtering option"
+    )
+
+    if date_filter_type == "Single Session":
+        # For now, show info about upcoming feature
+        st.sidebar.info("Single session selector coming with additional data.")
+    elif date_filter_type == "Date Range":
+        # Date range picker (currently disabled until multiple sessions available)
+        st.sidebar.info("Date range picker coming with additional sessions.")
+
+    st.sidebar.markdown("---")
+
+    # MP-8: Party Filter
+    st.sidebar.header("🎨 Party Filter (MP-8)")
+
+    # Party selection checkboxes
+    show_plp = st.sidebar.checkbox("PLP (Progressive Liberal Party)", value=True)
+    show_fnm = st.sidebar.checkbox("FNM (Free National Movement)", value=True)
+    show_coi = st.sidebar.checkbox("COI (Coalition of Independents)", value=True)
+
+    # Cross-party only toggle
+    cross_party_only = st.sidebar.checkbox(
+        "Cross-party edges only",
+        value=False,
+        help="Show only interactions between MPs of different parties"
+    )
+
+    st.sidebar.markdown("---")
+
+    # MP-9: Search Bar
+    st.sidebar.header("🔍 Search MP (MP-9)")
+    search_query = st.sidebar.text_input(
+        "Search by name, alias, or constituency",
+        placeholder="e.g., Brave, Chester, Fox Hill",
+        help="Use fuzzy matching to find MPs"
+    )
+
     # === VIEW MODE: MP REPORT CARD (MP-13) ===
     if view_mode == "MP Report Card" or mp_id_param:
         st.markdown("---")
-        
+
         # Discover sessions for report card
         sessions = discover_sessions()
-        
+
         if not sessions:
             st.warning("No session data available. Generate sample data with `python examples/build_session_graph.py`")
             return
-        
+
         # Load all sessions for report card
         session_graphs = []
         for session_info in sessions:
@@ -109,66 +287,66 @@ def main():
                 data = load_session_data(session_info)
                 if data:
                     session_graphs.append(SessionGraph(**data))
-        
+
         if not session_graphs:
             st.warning("Could not load session data.")
             return
-        
+
         # If MP ID provided in URL, use it directly
         if mp_id_param:
             selected_mp_id = mp_id_param
         else:
             # Otherwise show MP selector
             selected_mp_id = render_mp_selector(session_graphs)
-        
+
         if selected_mp_id:
             # Build and render report card
             report_card = build_report_card(selected_mp_id, session_graphs)
-            
+
             if report_card:
                 render_report_card(report_card)
             else:
                 st.error(f"No data found for MP: {selected_mp_id}")
-        
+
         return
-    
+
     # === VIEW MODE: SESSION TIMELINE (MP-12) ===
     if view_mode == "Session Timeline":
         st.markdown("---")
-        
+
         # Discover available sessions
         sessions = discover_sessions()
-        
+
         # Callback for session selection
         def on_session_select(session_info):
             st.session_state.selected_session = session_info
-        
+
         # Render timeline
         selected_session = render_timeline(
             sessions=sessions,
             selected_session=st.session_state.selected_session,
             on_session_select=on_session_select,
         )
-        
+
         # Update session state if changed
         if selected_session:
             st.session_state.selected_session = selected_session
-        
+
         # Load and display selected session
         if st.session_state.selected_session:
             session_info = st.session_state.selected_session
             st.markdown("---")
             st.subheader(f"Session: {session_info.display_date}")
-            
+
             # Load session data
             data = load_session_data(session_info)
             if data:
                 session_graph = SessionGraph(**data)
-                
+
                 # Display session info
                 st.success(f"✅ Loaded {session_graph.session_id} ({session_graph.date})")
                 st.markdown(f"**{session_graph.node_count}** MPs, **{session_graph.edge_count}** interactions")
-                
+
                 # Build force-directed graph
                 with st.spinner("Rendering force-directed graph..."):
                     net = build_force_directed_graph(
@@ -178,59 +356,93 @@ def main():
                         height="600px",
                         width="100%",
                     )
-                    
+
                     html_content = net.generate_html()
                     components.html(html_content, height=650, scrolling=True)
             else:
                 st.error(f"Could not load data for session: {session_info.session_id}")
-        
+
         return
-    
+
     # === VIEW MODE: GRAPH EXPLORER (default with leaderboard) ===
     if graph_type == "Sample Session":
         session_graph = load_sample_graph()
-        
+
         if session_graph is None:
             st.warning(
                 "⚠️ Sample graph not found. "
                 "Run `python examples/build_session_graph.py` to generate sample data."
             )
         else:
-            st.success(f"✅ Loaded {session_graph.session_id} ({session_graph.date})")
-            st.markdown(f"**{session_graph.node_count}** MPs, **{session_graph.edge_count}** interactions")
-            
+            # Apply party filter (MP-8)
+            selected_parties = []
+            if show_plp:
+                selected_parties.append("PLP")
+            if show_fnm:
+                selected_parties.append("FNM")
+            if show_coi:
+                selected_parties.append("COI")
+
+            if not selected_parties:
+                st.warning("⚠️ Please select at least one party to display.")
+                return
+
+            # Filter graph
+            filtered_graph = filter_graph_by_party(
+                session_graph,
+                selected_parties,
+                cross_party_only
+            )
+
+            # Apply search filter (MP-9)
+            search_matches = []
+            if search_query:
+                search_matches = search_mp(search_query, golden_record, filtered_graph)
+                if search_matches:
+                    st.sidebar.success(f"✓ Found {len(search_matches)} matching MP(s)")
+                else:
+                    st.sidebar.warning("No matches found")
+
+            st.success(f"✅ Loaded {filtered_graph.session_id} ({filtered_graph.date})")
+            st.markdown(f"**{filtered_graph.node_count}** MPs, **{filtered_graph.edge_count}** interactions")
+
+            if filtered_graph.node_count == 0:
+                st.warning("⚠️ No MPs match the current filters.")
+                return
+
             # Create two columns: main graph and sidebar leaderboard
             col_graph, col_leaderboard = st.columns([3, 1])
-            
+
             with col_graph:
                 # Build force-directed graph (MP-1 through MP-4)
                 with st.spinner("Rendering force-directed graph..."):
                     net = build_force_directed_graph(
-                        session_graph,
+                        filtered_graph,
                         metric=metric,
                         use_blue_for_fnm=use_blue_for_fnm,
                         height="750px",
                         width="100%",
+                        highlight_nodes=search_matches if search_matches else None,
                     )
-                    
+
                     # Render to HTML in memory (no temp file needed)
                     html_content = net.generate_html()
                     components.html(html_content, height=800, scrolling=True)
-            
+
             with col_leaderboard:
                 # Render Leaderboard (MP-10)
                 def on_mp_click(node_id):
                     st.session_state.highlighted_node = node_id
                     st.info(f"Node highlighted: {node_id}")
-                
-                render_leaderboard(session_graph, on_mp_click=on_mp_click)
-            
+
+                render_leaderboard(filtered_graph, on_mp_click=on_mp_click)
+
             # Display legend
             st.markdown("---")
             st.subheader("Legend")
-            
+
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 st.markdown("**Party Colors (MP-2)**")
                 st.markdown("🟡 **PLP** — Gold (#FFD700)")
@@ -239,25 +451,34 @@ def main():
                 else:
                     st.markdown("🔴 **FNM** — Red (#DC143C)")
                 st.markdown("⚫ **COI** — Grey (#808080)")
-            
+
             with col2:
                 st.markdown("**Edge Colors (MP-4)**")
                 st.markdown("🟢 **Positive** — Net sentiment > 0.2")
                 st.markdown("⚫ **Neutral** — Net sentiment -0.2 to 0.2")
                 st.markdown("🔴 **Negative** — Net sentiment < -0.2")
-            
+
             st.markdown(f"**Node Size**: {metric.replace('_', ' ').title()}")
             st.markdown("**Edge Thickness**: Mention count")
-            
+
+            # Show active filters
+            if search_matches:
+                st.info(f"🔍 **Search Filter Active**: Highlighting {len(search_matches)} MP(s)")
+
             # Show metrics table
             st.markdown("---")
             st.subheader("Node Metrics")
-            
+
             # Build metrics dataframe
             metrics_data = []
-            for node in session_graph.nodes:
+            for node in filtered_graph.nodes:
+                # Highlight searched MPs in the table
+                mp_name = node.common_name
+                if search_matches and node.node_id in search_matches:
+                    mp_name = f"⭐ {mp_name}"
+
                 metrics_data.append({
-                    "MP": node.common_name,
+                    "MP": mp_name,
                     "Party": node.party,
                     "Degree In": node.degree_in,
                     "Degree Out": node.degree_out,
@@ -265,9 +486,9 @@ def main():
                     "Eigenvector": f"{node.eigenvector:.3f}",
                     "Roles": ", ".join(node.structural_role) if node.structural_role else "None",
                 })
-            
+
             st.dataframe(metrics_data, use_container_width=True)
-    
+
     elif graph_type == "Timeline Sessions":
         # Redirect to timeline view
         st.info("📋 Switch to **Session Timeline** view in the sidebar to explore sessions over time.")
