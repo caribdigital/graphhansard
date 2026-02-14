@@ -19,7 +19,7 @@ def test_about_page_content_present():
     """Test that About page contains all required MP-16 elements."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Find About section
@@ -44,7 +44,7 @@ def test_about_page_data_collection_explicit():
     """Test that data collection process is explicitly described (MP-16.4)."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Check for 5-step process
@@ -64,7 +64,7 @@ def test_about_page_metrics_computation():
     """Test that metrics computation is explained (MP-16.5)."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Check for algorithm explanations
@@ -84,7 +84,7 @@ def test_about_page_data_sources():
     """Test that data sources are clearly listed (MP-16.6)."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Check for required data sources
@@ -101,7 +101,7 @@ def test_about_page_limitations():
     """Test that limitations are clearly stated (MP-16.7)."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Check for required limitations
@@ -119,7 +119,7 @@ def test_about_navigation_accessible():
     """Test that About page is accessible from navigation (MP-16.1)."""
     app_path = Path(__file__).parent.parent / "src" / "graphhansard" / "dashboard" / "app.py"
     
-    with open(app_path, "r") as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
     
     # Check that "About" is in the radio button options

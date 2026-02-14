@@ -33,12 +33,8 @@ FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
 GOLDEN_RECORD_PATH = "golden_record/mps.json"  # Relative to project root
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour (MP-14: Performance)
 def load_sample_graph() -> SessionGraph | None:
-    """Load sample session graph if available.
-    
-    Cached to improve load times per MP-14 requirement.
-    """
+    """Load sample session graph if available."""
     sample_path = Path("output/sample_session_metrics.json")
     if sample_path.exists():
         with open(sample_path, "r") as f:
