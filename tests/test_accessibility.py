@@ -111,13 +111,13 @@ class TestAccessibility:
         # Verify use of standard Streamlit interactive components
         # These are keyboard-navigable by default
         interactive_components = [
-            "st.button",
-            "st.selectbox",
-            "st.multiselect",
-            "st.checkbox",
-            "st.radio",
-            "st.slider",
-            "st.text_input",
+            ".button",
+            ".selectbox",
+            ".multiselect",
+            ".checkbox",
+            ".radio",
+            ".slider",
+            ".text_input",
         ]
 
         found_components = [comp for comp in interactive_components if comp in content]
