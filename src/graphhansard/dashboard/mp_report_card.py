@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from graphhansard.brain.graph_builder import NodeMetrics, SessionGraph
+from graphhansard.brain.graph_builder import EdgeRecord, NodeMetrics, SessionGraph
 
 
 class MPReportCard:
