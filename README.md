@@ -259,6 +259,8 @@ Navigate between three main views via the sidebar:
 
 - Complete guide: [`docs/dashboard_features.md`](docs/dashboard_features.md)
 - Graph visualization: [`docs/graph_visualization_guide.md`](docs/graph_visualization_guide.md)
+- **Methodology**: [`docs/methodology.md`](docs/methodology.md) — Plain language explanation of how GraphHansard works
+- **Data Provenance**: [`docs/data_provenance.md`](docs/data_provenance.md) — Documentation of all data sources (NF-15)
 - API reference: See module docstrings in `src/graphhansard/dashboard/`
 
 ---
@@ -276,6 +278,45 @@ Navigate between three main views via the sidebar:
 - [ ] **M-3.4** Public beta launch
 
 See [SRD v1.0](docs/SRD_v1.0.md) for the full requirements document and timeline.
+
+---
+
+## Ethical Framework
+
+GraphHansard is committed to transparency, neutrality, and responsible civic technology:
+
+### Public Data Only (NF-15)
+All source audio is from publicly available parliamentary recordings. We do **not** use:
+- FOIA requests or leaked documents
+- Private communications or off-the-record discussions
+- Restricted or confidential data
+
+See [Data Provenance Documentation](docs/data_provenance.md) for complete source tracking.
+
+### Neutral Framing (NF-16)
+We present data and computed metrics, not editorial conclusions:
+- No value judgments ("good", "bad", "corrupt", "lazy")
+- Structural roles use standard graph theory terminology
+- Metrics are descriptive, not prescriptive
+
+See [Code Review Neutrality Checklist](docs/code_review_neutrality_checklist.md) for our standards.
+
+### Transparent Methodology (NF-17)
+Our full pipeline is documented in plain language:
+- How we process audio
+- How we identify speakers
+- How we extract mentions
+- What our limitations are
+
+See [Methodology Documentation](docs/methodology.md) for details.
+
+### Disclaimers (NF-18)
+Network metrics are **descriptive statistics** derived from parliamentary proceedings. They:
+- Do **not** imply wrongdoing, incompetence, or endorsement
+- Do **not** measure MP effectiveness or job performance
+- Do **not** capture constituency service, committee work, or private negotiations
+
+See dashboard About page and export file headers for full disclaimers.
 
 ---
 

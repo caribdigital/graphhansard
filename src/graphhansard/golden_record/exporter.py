@@ -54,6 +54,7 @@ class GoldenRecordExporter:
                     "export_format": "json",
                     "source_file": str(self.golden_record_path.name),
                     "golden_record_version": self.golden_record.metadata.version,
+                    "disclaimer": "Network metrics are descriptive statistics derived from parliamentary proceedings. They do not imply wrongdoing, incompetence, or endorsement. See methodology documentation for limitations.",
                 },
                 "golden_record": data,
             }
@@ -87,6 +88,11 @@ class GoldenRecordExporter:
                 f"# Exported: {datetime.now(timezone.utc).isoformat()}"
             ])
             writer.writerow([f"# Total MPs: {len(self.golden_record.mps)}"])
+            writer.writerow([])  # Blank line
+            # NF-18: Disclaimer (written as plain text with # prefix to avoid CSV quoting)
+            f.write("# DISCLAIMER: Network metrics are descriptive statistics derived from parliamentary proceedings.\n")
+            f.write("# They do not imply wrongdoing, incompetence, or endorsement.\n")
+            f.write("# See methodology documentation for limitations.\n")
             writer.writerow([])  # Blank line
 
             # Write header row

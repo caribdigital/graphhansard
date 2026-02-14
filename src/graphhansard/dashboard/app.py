@@ -8,21 +8,25 @@ See SRD §9 (Layer 3 — The Map) for specification.
 from __future__ import annotations
 
 import json
+from pathlib import Path
+
 import streamlit as st
 import streamlit.components.v1 as components
-from pathlib import Path
 from rapidfuzz import fuzz
 
 from graphhansard.brain.graph_builder import SessionGraph
 from graphhansard.dashboard.graph_viz import build_force_directed_graph
 from graphhansard.dashboard.leaderboard import render_leaderboard
-from graphhansard.dashboard.timeline import discover_sessions, render_timeline, load_session_data
 from graphhansard.dashboard.mp_report_card import (
     build_report_card,
-    render_report_card,
     render_mp_selector,
+    render_report_card,
 )
-
+from graphhansard.dashboard.timeline import (
+    discover_sessions,
+    load_session_data,
+    render_timeline,
+)
 
 # Configuration constants
 FUZZY_MATCH_THRESHOLD = 75  # Minimum fuzzy matching score (0-100)
@@ -63,7 +67,6 @@ def filter_graph_by_party(
     Returns:
         Filtered SessionGraph
     """
-    from graphhansard.brain.graph_builder import EdgeRecord, NodeMetrics
 
     # Filter nodes by party
     filtered_nodes = [
@@ -184,6 +187,12 @@ def main():
     st.title("GraphHansard")
     st.subheader("Bahamian House of Assembly — Political Interaction Network")
 
+    # NF-18: Disclaimer
+    st.info(
+        "ℹ️ **Disclaimer:** Network metrics are descriptive statistics derived from parliamentary proceedings. "
+        "They do not imply wrongdoing, incompetence, or endorsement. See the About page for methodology and limitations."
+    )
+
     # Load Golden Record for search functionality
     golden_record = load_golden_record()
 
@@ -193,7 +202,7 @@ def main():
     # View selector
     view_mode = st.sidebar.radio(
         "Dashboard View",
-        options=["Graph Explorer", "Session Timeline", "MP Report Card"],
+        options=["Graph Explorer", "Session Timeline", "MP Report Card", "About"],
         index=0,
         help="Select dashboard view"
     )
@@ -268,6 +277,140 @@ def main():
         placeholder="e.g., Brave, Chester, Fox Hill",
         help="Use fuzzy matching to find MPs"
     )
+
+    # === VIEW MODE: ABOUT (NF-17) ===
+    if view_mode == "About":
+        st.markdown("---")
+        st.header("📖 About GraphHansard")
+
+        st.markdown("""
+        ## What is GraphHansard?
+        
+        GraphHansard is an open-source civic technology platform that applies computational sociology 
+        and graph theory to the proceedings of the Bahamian House of Assembly. We transform 
+        parliamentary speech into data, revealing the structure of political influence through 
+        network analysis.
+        
+        ### What We Do
+        
+        We analyze public parliamentary audio to create an interactive **Political Interaction Network** 
+        that shows:
+        - **Who mentions whom** during parliamentary debate
+        - **How often** these interactions occur
+        - **The tone** of these interactions (positive, neutral, negative)
+        - **Structural roles** of MPs within the debate network
+        
+        ### Our Principles
+        
+        1. **Open Data**: All source audio is from publicly available parliamentary recordings
+        2. **Open Code**: The entire codebase is MIT-licensed on GitHub
+        3. **Open Methodology**: We transparently document how the system works
+        4. **Neutral Framing**: We present data and metrics, not editorial conclusions
+        
+        ## Methodology & Limitations
+        
+        For a complete explanation of how GraphHansard works in plain language, please read:
+        
+        📄 **[Full Methodology Documentation](https://github.com/caribdigital/graphhansard/blob/main/docs/methodology.md)**
+        
+        ### Key Limitations
+        
+        1. **Transcription Accuracy**: Speech-to-text models are not 100% accurate (target: ≤15% error rate)
+        2. **Sentiment Analysis**: Models struggle with Bahamian Creole, sarcasm, and parliamentary conventions
+        3. **Alias Resolution**: Identifying speakers is probabilistic, with confidence scores
+        4. **Audio Quality**: Older or lower-quality recordings reduce accuracy
+        5. **Scope**: We only measure public debate, not committee work, constituency service, or private negotiations
+        
+        ### What We Don't Measure
+        
+        - Policy positions or voting records
+        - MP "effectiveness" or job performance
+        - Private influence or backroom negotiations
+        - Intent or motivation (only observable patterns)
+        
+        ## Data Sources
+        
+        All audio data comes from:
+        - Official Bahamian House of Assembly YouTube channel
+        - Public parliamentary broadcasts
+        
+        **We do NOT use:**
+        - FOIA requests
+        - Leaked documents
+        - Private communications
+        - Restricted data
+        
+        📄 **[Data Provenance Documentation](https://github.com/caribdigital/graphhansard/blob/main/docs/data_provenance.md)**
+        
+        ## Understanding Network Metrics
+        
+        ### Degree Centrality
+        How many connections an MP has (mentions made + mentions received)
+        
+        ### Betweenness Centrality
+        How often an MP connects different groups ("bridge" role)
+        
+        ### Eigenvector Centrality
+        Whether an MP is connected to other well-connected MPs ("force multiplier" role)
+        
+        ### Closeness Centrality
+        How "close" an MP is to all others in the network
+        
+        **Important**: These are descriptive statistics, not value judgments. There is no "best" 
+        centrality score. Context matters.
+        
+        ## How to Use This Data Responsibly
+        
+        ### For Citizens
+        - Use this tool to explore interaction patterns, but remember that debate participation 
+          alone doesn't tell you if your MP is serving your interests
+        - Context matters: A backbencher with low centrality might be doing excellent constituency work
+        
+        ### For Journalists
+        - Use this data as a starting point for investigation, not a conclusion
+        - Always verify individual claims by listening to the original audio
+        - Be cautious about interpreting sentiment scores without listening to context
+        
+        ### For Researchers
+        - This dataset is suitable for aggregate analysis
+        - Individual-level claims require validation against ground truth
+        - Always cite limitations when publishing findings
+        
+        ## Contributing
+        
+        GraphHansard is a community project. You can contribute by:
+        - Reporting transcription errors
+        - Improving the Golden Record (MP aliases)
+        - Contributing to documentation
+        - Submitting code improvements
+        
+        📄 **[Community Contributions Guide](https://github.com/caribdigital/graphhansard/blob/main/docs/community_contributions.md)**
+        
+        ## License & Attribution
+        
+        - **Code**: MIT License
+        - **Data**: CC-BY-4.0 (attribution required)
+        - **Attribution**: GraphHansard / Carib Digital Labs
+        
+        ## Contact & Support
+        
+        - **GitHub**: https://github.com/caribdigital/graphhansard
+        - **Issues**: https://github.com/caribdigital/graphhansard/issues
+        - **Documentation**: https://github.com/caribdigital/graphhansard/tree/main/docs
+        
+        ## Version Information
+        
+        - **Platform Version**: 0.1.0
+        - **Parliament**: 15th Parliament of The Bahamas
+        - **Last Updated**: February 2026
+        
+        ---
+        
+        *"The House is in session. The recorder is running. Let's map the noise."*  
+        *— Dr. Aris Moncur*
+        """)
+
+        return
 
     # === VIEW MODE: MP REPORT CARD (MP-13) ===
     if view_mode == "MP Report Card" or mp_id_param:
