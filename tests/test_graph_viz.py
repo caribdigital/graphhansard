@@ -1,12 +1,12 @@
 """Tests for force-directed graph visualization.
 
-Covers: MP-1 through MP-4 requirements.
+Covers: MP-1 through MP-6, MP-11 requirements.
 """
 
 import pytest
 from pyvis.network import Network
 
-from graphhansard.brain.graph_builder import SessionGraph, NodeMetrics, EdgeRecord
+from graphhansard.brain.graph_builder import SessionGraph, NodeMetrics, EdgeRecord, MentionDetail
 from graphhansard.dashboard.graph_viz import (
     build_force_directed_graph,
     get_sentiment_color,
@@ -26,6 +26,8 @@ def sample_session_graph():
             node_id="mp_davis_brave",
             common_name="Brave Davis",
             party="PLP",
+            constituency="Cat Island, Rum Cay and San Salvador",
+            current_portfolio="Prime Minister",
             degree_in=2,
             degree_out=2,
             betweenness=1.0,
@@ -37,6 +39,8 @@ def sample_session_graph():
             node_id="mp_cooper_chester",
             common_name="Chester Cooper",
             party="PLP",
+            constituency="Exuma and Ragged Island",
+            current_portfolio="Deputy Prime Minister",
             degree_in=1,
             degree_out=1,
             betweenness=0.0,
@@ -48,6 +52,8 @@ def sample_session_graph():
             node_id="mp_pintard_michael",
             common_name="Michael Pintard",
             party="FNM",
+            constituency="Marco City",
+            current_portfolio="Leader of the Opposition",
             degree_in=1,
             degree_out=1,
             betweenness=0.0,
@@ -59,6 +65,8 @@ def sample_session_graph():
             node_id="mp_gray_khaalis",
             common_name="Khaalis Gray",
             party="COI",
+            constituency="MICAL",
+            current_portfolio=None,
             degree_in=0,
             degree_out=0,
             betweenness=0.0,
@@ -77,6 +85,15 @@ def sample_session_graph():
             neutral_count=1,
             negative_count=0,
             net_sentiment=0.8,  # Positive
+            mention_details=[
+                MentionDetail(
+                    timestamp_start=10.5,
+                    timestamp_end=12.0,
+                    context_window="I commend the Deputy Prime Minister.",
+                    sentiment_label="positive",
+                    raw_mention="Deputy Prime Minister"
+                )
+            ]
         ),
         EdgeRecord(
             source_node_id="mp_davis_brave",
@@ -86,6 +103,7 @@ def sample_session_graph():
             neutral_count=2,
             negative_count=0,
             net_sentiment=0.0,  # Neutral
+            mention_details=[]
         ),
         EdgeRecord(
             source_node_id="mp_pintard_michael",
@@ -95,6 +113,15 @@ def sample_session_graph():
             neutral_count=0,
             negative_count=2,
             net_sentiment=-1.0,  # Negative
+            mention_details=[
+                MentionDetail(
+                    timestamp_start=120.0,
+                    timestamp_end=122.5,
+                    context_window="The Prime Minister has failed.",
+                    sentiment_label="negative",
+                    raw_mention="Prime Minister"
+                )
+            ]
         ),
         EdgeRecord(
             source_node_id="mp_cooper_chester",
@@ -104,6 +131,7 @@ def sample_session_graph():
             neutral_count=0,
             negative_count=0,
             net_sentiment=1.0,  # Positive
+            mention_details=[]
         ),
     ]
     
