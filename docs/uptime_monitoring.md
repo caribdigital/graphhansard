@@ -3,9 +3,11 @@
 ## Overview
 
 The GraphHansard dashboard requires **≥99% uptime** per month. This translates to:
-- Maximum downtime: **7.2 hours per month** (30 days)
-- Maximum downtime: **1.68 hours per week**
-- Maximum downtime: **14.4 minutes per day**
+- Maximum downtime per month (30 days): **7.2 hours**
+- Maximum downtime per week (7 days): **1.68 hours** 
+- Maximum downtime per day (24 hours): **14.4 minutes**
+
+Note: These are cumulative limits - meeting the monthly target automatically satisfies the shorter time periods.
 
 ## Recommended Monitoring Solutions
 
