@@ -147,11 +147,11 @@ def search_mp(query: str, golden_record: dict, session_graph: SessionGraph) -> l
             if fuzz.partial_ratio(query_lower, alias.lower()) >= FUZZY_MATCH_THRESHOLD:
                 matches.append(node_id)
                 break
-        
-        # Check constituency
-        constituency = mp.get("constituency", "")
-        if fuzz.partial_ratio(query_lower, constituency.lower()) >= FUZZY_MATCH_THRESHOLD:
-            matches.append(node_id)
+        else:
+            # Check constituency (only if no alias matched)
+            constituency = mp.get("constituency", "")
+            if fuzz.partial_ratio(query_lower, constituency.lower()) >= FUZZY_MATCH_THRESHOLD:
+                matches.append(node_id)
     
     return list(set(matches))  # Remove duplicates
 
