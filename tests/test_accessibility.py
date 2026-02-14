@@ -24,7 +24,7 @@ class TestAccessibility:
         if not graph_viz_path.exists():
             pytest.skip("graph_viz.py not found")
 
-        content = graph_viz_path.read_text()
+        content = graph_viz_path.read_text(encoding="utf-8")
 
         # Verify that edge styling includes pattern/dash options for sentiment
         # PyVis supports 'dashes' parameter for edges
@@ -38,7 +38,7 @@ class TestAccessibility:
         if not graph_viz_path.exists():
             pytest.skip("graph_viz.py not found")
 
-        content = graph_viz_path.read_text()
+        content = graph_viz_path.read_text(encoding="utf-8")
 
         # Verify nodes have labels
         assert 'label=' in content, (
@@ -56,7 +56,7 @@ class TestAccessibility:
         if not app_path.exists():
             pytest.skip("Dashboard app not found")
 
-        content = app_path.read_text()
+        content = app_path.read_text(encoding="utf-8")
 
         # Streamlit components should be properly labeled
         # Check for semantic HTML or accessibility comments
@@ -77,7 +77,7 @@ class TestAccessibility:
         if not methodology_path.exists():
             pytest.skip("methodology.md not found")
 
-        content = methodology_path.read_text()
+        content = methodology_path.read_text(encoding="utf-8")
 
         # Verify document explicitly targets plain language
         assert "plain language" in content.lower() or "Grade 10" in content, (
@@ -106,7 +106,7 @@ class TestAccessibility:
         if not app_path.exists():
             pytest.skip("Dashboard app not found")
 
-        content = app_path.read_text()
+        content = app_path.read_text(encoding="utf-8")
 
         # Verify use of standard Streamlit interactive components
         # These are keyboard-navigable by default
@@ -128,24 +128,22 @@ class TestAccessibility:
 
     def test_color_legend_includes_patterns(self):
         """Verify dashboard includes legend explaining patterns for color-blind users (NF-13)."""
-        # This test will pass once we add pattern legend to the dashboard
         app_path = Path("src/graphhansard/dashboard/app.py")
         if not app_path.exists():
             pytest.skip("Dashboard app not found")
 
-        content = app_path.read_text()
+        content = app_path.read_text(encoding="utf-8")
 
-        # Check for legend or explanation of patterns
-        has_pattern_legend = (
-            "pattern" in content.lower() or
-            "dashed" in content.lower() or
-            "solid" in content.lower() or
-            "legend" in content.lower()
+        # Verify the legend explains edge patterns for color-blind accessibility
+        assert "Solid" in content and "Positive" in content, (
+            "Legend must explain solid line = positive sentiment"
         )
-
-        # This is a soft check - we'll implement this
-        if not has_pattern_legend:
-            pytest.skip("Pattern legend not yet implemented")
+        assert "Dashed" in content and "Neutral" in content, (
+            "Legend must explain dashed line = neutral sentiment"
+        )
+        assert "Dotted" in content and "Negative" in content, (
+            "Legend must explain dotted line = negative sentiment"
+        )
 
     def test_party_colors_have_text_alternatives(self):
         """Verify party identification doesn't rely solely on color (NF-13)."""
@@ -153,7 +151,7 @@ class TestAccessibility:
         if not graph_viz_path.exists():
             pytest.skip("graph_viz.py not found")
 
-        content = graph_viz_path.read_text()
+        content = graph_viz_path.read_text(encoding="utf-8")
 
         # Verify tooltips include party information
         assert "Party:" in content or 'party' in content, (
@@ -166,7 +164,7 @@ class TestAccessibility:
         if not srd_path.exists():
             pytest.skip("SRD not found")
 
-        content = srd_path.read_text()
+        content = srd_path.read_text(encoding="utf-8")
 
         # Verify accessibility requirements are documented
         assert "NF-12" in content, "SRD must document NF-12"

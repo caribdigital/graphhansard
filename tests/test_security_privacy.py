@@ -25,7 +25,7 @@ class TestSecurityPrivacy:
         gitignore_path = Path(".gitignore")
         assert gitignore_path.exists(), ".gitignore file must exist"
 
-        content = gitignore_path.read_text()
+        content = gitignore_path.read_text(encoding="utf-8")
 
         # Required patterns per NF-10
         required_patterns = [
@@ -122,7 +122,7 @@ class TestSecurityPrivacy:
         if not contributions_module.exists():
             pytest.skip("Contributions module not found")
 
-        content = contributions_module.read_text()
+        content = contributions_module.read_text(encoding="utf-8")
 
         # Verify submitter_email is optional (has default=None)
         assert "submitter_email: str | None" in content, (
@@ -165,7 +165,7 @@ class TestSecurityPrivacy:
     def test_gitignore_excludes_contribution_queue(self):
         """Verify contribution queue (may contain submitter info) is excluded (NF-9)."""
         gitignore_path = Path(".gitignore")
-        content = gitignore_path.read_text()
+        content = gitignore_path.read_text(encoding="utf-8")
 
         # Contribution queue file should be excluded as it may contain submitter emails
         assert "contributions_queue.json" in content, (
