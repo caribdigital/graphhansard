@@ -234,8 +234,10 @@ def sentiment_command(args):
         scored_mentions.append(mention_dict)
 
     # Save scored mentions
-    output_path = args.output or mentions_path.stem + "_scored.json"
-    output_path = Path(output_path)
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = mentions_path.parent / f"{mentions_path.stem}_scored.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
