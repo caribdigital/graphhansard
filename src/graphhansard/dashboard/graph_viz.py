@@ -141,6 +141,7 @@ def build_force_directed_graph(
     )
     
     # Configure physics for force-directed layout
+    # Optimized for MP-14: Fast convergence (≤3 seconds)
     net.set_options("""
     {
         "physics": {
@@ -156,13 +157,15 @@ def build_force_directed_graph(
             "solver": "forceAtlas2Based",
             "stabilization": {
                 "enabled": true,
-                "iterations": 100
+                "iterations": 100,
+                "updateInterval": 25
             }
         },
         "edges": {
             "smooth": {
                 "enabled": true,
-                "type": "dynamic"
+                "type": "continuous",
+                "roundness": 0.5
             },
             "arrows": {
                 "to": {
@@ -175,7 +178,16 @@ def build_force_directed_graph(
             "hover": true,
             "tooltipDelay": 100,
             "zoomView": true,
-            "dragView": true
+            "dragView": true,
+            "navigationButtons": true,
+            "keyboard": {
+                "enabled": true,
+                "bindToWindow": false
+            }
+        },
+        "layout": {
+            "improvedLayout": true,
+            "clusterThreshold": 150
         }
     }
     """)
