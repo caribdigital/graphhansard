@@ -58,7 +58,7 @@ def transcribe_command(args):
     output_path = args.output or f"{args.session_id}_transcript.json"
     pipeline.save_transcript(transcript, output_path)
 
-    print(f"\n✓ Transcript saved to: {output_path}")
+    print(f"\n[OK] Transcript saved to: {output_path}")
     print(f"  Segments: {len(transcript.segments)}")
 
     # Print summary statistics
@@ -115,7 +115,7 @@ def batch_command(args):
         enable_diarization=not args.no_diarization,
     )
 
-    print(f"\n✓ Processed {len(output_files)} files")
+    print(f"\n[OK] Processed {len(output_files)} files")
     print(f"  Output directory: {args.output_dir}")
 
 
@@ -191,7 +191,7 @@ def extract_command(args):
             ensure_ascii=False,
         )
 
-    print(f"\n✓ Extracted {len(mentions)} mentions")
+    print(f"\n[OK] Extracted {len(mentions)} mentions")
     print(f"  Output: {output_path}")
 
     # Print summary statistics
@@ -243,7 +243,7 @@ def sentiment_command(args):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(scored_mentions, f, indent=2, ensure_ascii=False)
 
-    print(f"\n✓ Scored {len(scored_mentions)} mentions")
+    print(f"\n[OK] Scored {len(scored_mentions)} mentions")
     print(f"  Output: {output_path}")
 
     # Print summary statistics
@@ -305,7 +305,7 @@ def build_graph_command(args):
 
     builder.export_json(session_graph, str(output_path))
 
-    print(f"\n✓ Session graph built successfully")
+    print(f"\n[OK] Session graph built successfully")
     print(f"  Output: {output_path}")
     print(f"  Nodes: {session_graph.node_count} MPs")
     print(f"  Edges: {session_graph.edge_count} interactions")
@@ -326,7 +326,6 @@ def build_graph_command(args):
 def process_command(args):
     """Handle the process command (Full pipeline: Stages 1-5)."""
     import json
-    from graphhansard.brain.pipeline import create_pipeline
     from graphhansard.brain.entity_extractor import EntityExtractor
     from graphhansard.brain.sentiment import SentimentScorer
     from graphhansard.brain.graph_builder import GraphBuilder
@@ -363,7 +362,7 @@ def process_command(args):
 
     transcript_path = output_dir / f"{args.session_id}_transcript.json"
     pipeline.save_transcript(transcript, str(transcript_path))
-    print(f"✓ Transcript saved: {transcript_path}")
+    print(f"[OK] Transcript saved: {transcript_path}")
     print(f"  Segments: {len(transcript.segments)}")
 
     # Stage 2: Entity Extraction
@@ -389,7 +388,7 @@ def process_command(args):
             ensure_ascii=False,
         )
 
-    print(f"✓ Mentions extracted: {mentions_path}")
+    print(f"[OK] Mentions extracted: {mentions_path}")
     print(f"  Total mentions: {len(mentions)}")
     resolved = sum(1 for m in mentions if m.target_node_id is not None)
     print(f"  Resolved: {resolved}/{len(mentions)}")
@@ -414,7 +413,7 @@ def process_command(args):
     with open(scored_path, "w", encoding="utf-8") as f:
         json.dump(scored_mentions, f, indent=2, ensure_ascii=False)
 
-    print(f"✓ Sentiment scored: {scored_path}")
+    print(f"[OK] Sentiment scored: {scored_path}")
     sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
     for m in scored_mentions:
         sentiment_counts[m["sentiment_label"]] += 1
@@ -454,20 +453,20 @@ def process_command(args):
 
     graph_json_path = output_dir / f"sample_session_{args.session_id}.json"
     builder.export_json(session_graph, str(graph_json_path))
-    print(f"✓ Dashboard JSON: {graph_json_path}")
+    print(f"[OK] Dashboard JSON: {graph_json_path}")
 
     if args.export_all:
         graphml_path = output_dir / f"{args.session_id}.graphml"
         nx_graph = builder.build_graph_from_session(session_graph)
         builder.export_graphml(nx_graph, str(graphml_path))
-        print(f"✓ GraphML: {graphml_path}")
+        print(f"[OK] GraphML: {graphml_path}")
 
         csv_path = output_dir / f"{args.session_id}_edges.csv"
         builder.export_csv(session_graph, str(csv_path))
-        print(f"✓ CSV: {csv_path}")
+        print(f"[OK] CSV: {csv_path}")
 
     print("\n" + "=" * 70)
-    print("✅ Pipeline Complete!")
+    print("[DONE] Pipeline Complete!")
     print("=" * 70)
     print(f"\nDashboard-ready output: {graph_json_path}")
     print(f"Nodes: {session_graph.node_count} MPs")
@@ -477,7 +476,7 @@ def process_command(args):
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="GraphHansard Transcription & Diarization Pipeline",
+        description="GraphHansard Brain Pipeline (Transcription, Entity Extraction, Sentiment, Graph Construction)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -624,7 +623,7 @@ def main():
 
     # Process command (Full Pipeline: Stages 1-5)
     process_parser = subparsers.add_parser(
-        "process", help="Run full pipeline: audio → dashboard output (Stages 1-5)"
+        "process", help="Run full pipeline: audio -> dashboard output (Stages 1-5)"
     )
     process_parser.add_argument("audio_file", help="Path to audio file")
     process_parser.add_argument(

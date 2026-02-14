@@ -44,9 +44,9 @@ def sample_transcript(tmp_path):
     }
     
     transcript_path = tmp_path / "test_transcript.json"
-    with open(transcript_path, "w") as f:
+    with open(transcript_path, "w", encoding="utf-8") as f:
         json.dump(transcript, f)
-    
+
     return transcript_path
 
 
@@ -83,9 +83,9 @@ def sample_mentions(tmp_path):
     ]
     
     mentions_path = tmp_path / "test_mentions.json"
-    with open(mentions_path, "w") as f:
+    with open(mentions_path, "w", encoding="utf-8") as f:
         json.dump(mentions, f)
-    
+
     return mentions_path
 
 
@@ -112,9 +112,9 @@ def sample_golden_record(tmp_path):
     }
     
     golden_path = tmp_path / "mps.json"
-    with open(golden_path, "w") as f:
+    with open(golden_path, "w", encoding="utf-8") as f:
         json.dump(golden_record, f)
-    
+
     return golden_path
 
 
