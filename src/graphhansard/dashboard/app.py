@@ -175,7 +175,18 @@ def search_mp(query: str, golden_record: dict, session_graph: SessionGraph) -> l
 
 
 def main():
-    """Launch the GraphHansard interactive dashboard."""
+    """Launch the GraphHansard interactive dashboard.
+    
+    Performance targets (MP-14):
+    - Initial load time: ≤3 seconds on 50 Mbps connection
+    - Graph interaction latency: ≤100ms (drag, zoom, pan)
+    - Single-session graph: 39 nodes, ~100 edges
+    
+    Responsiveness targets (MP-15):
+    - Full functionality: Desktop (1200px+) and Tablet (768px+)
+    - Graceful degradation: Mobile (<768px)
+    - Touch interactions: Pinch-to-zoom, pan, drag
+    """
     st.set_page_config(
         page_title="GraphHansard — Bahamian Parliamentary Network",
         page_icon="🏛️",
