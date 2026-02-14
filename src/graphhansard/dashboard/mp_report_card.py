@@ -198,6 +198,14 @@ def render_report_card(
     st.title(f"📊 MP Report Card: {report_card.mp_name}")
     st.markdown(f"**MP ID:** `{report_card.mp_id}`")
     
+    # NF-18: Disclaimer for MP Report Card
+    st.warning(
+        "⚠️ **Disclaimer:** This report card presents network metrics derived from parliamentary debate. "
+        "These are descriptive statistics, not evaluations of MP effectiveness or job performance. "
+        "Metrics do not capture constituency service, committee work, or private negotiations. "
+        "See the About page for methodology and limitations."
+    )
+    
     # Shareable URL info
     current_url = f"?mp_id={report_card.mp_id}"
     st.info(f"🔗 **Shareable URL:** Add `{current_url}` to the dashboard URL to link directly to this report card.")
