@@ -1,12 +1,3 @@
-"""Documentation for NF-8: Dashboard uptime monitoring.
-
-Requirement: Dashboard uptime ≥99% (monthly)
-
-This document provides setup instructions for implementing uptime
-monitoring for the GraphHansard dashboard.
-"""
-
-
 # NF-8: Dashboard Uptime Monitoring
 
 ## Overview

@@ -3,6 +3,7 @@
 Runs all available benchmarks and generates a summary report.
 """
 
+import importlib.util
 import json
 import sys
 import time
@@ -29,10 +30,10 @@ def run_benchmark(name: str, module_path: str, *args) -> dict:
     
     try:
         # Import and run the benchmark
-        spec = __import__('importlib.util').util.spec_from_file_location(
+        spec = importlib.util.spec_from_file_location(
             "benchmark", module_path
         )
-        module = __import__('importlib.util').util.module_from_spec(spec)
+        module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         
         # Run the benchmark function

@@ -310,4 +310,4 @@ When adding new benchmarks:
 ## References
 
 - Software Requirements Document (SRD): `docs/SRD_v1.0.md` §12.1-12.2
-- GitHub Issue: [NF: Performance & Reliability Targets](https://github.com/caribdigital/graphhansard/issues/XX)
+- See GitHub issue for complete NF-1 through NF-8 requirements
