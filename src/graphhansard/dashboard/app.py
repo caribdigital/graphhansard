@@ -354,6 +354,23 @@ def main():
         help="Use fuzzy matching to find MPs"
     )
 
+    # NF-13: Accessibility Legend - Color and Pattern Guide
+    st.sidebar.markdown("---")
+    st.sidebar.header("📊 Legend (NF-13)")
+    st.sidebar.markdown("""
+    **Node Colors (Party):**
+    - 🟡 Gold = PLP
+    - 🔴 Red = FNM (or 🔵 Blue)
+    - ⚪ Grey = COI
+
+    **Edge Patterns (Sentiment):**
+    - ━━━ Solid = Positive
+    - ┄┄┄ Dashed = Neutral
+    - ╌╌╌ Dotted = Negative
+
+    *Patterns ensure accessibility for color-blind users (WCAG 2.1 AA)*
+    """)
+
     # === VIEW MODE: ABOUT (NF-17) ===
     if view_mode == "About":
         st.markdown("---")

@@ -58,6 +58,28 @@ def get_sentiment_color(net_sentiment: float) -> str:
         return EDGE_COLOR_NEUTRAL
 
 
+def get_sentiment_pattern(net_sentiment: float) -> bool | list[int]:
+    """Map net sentiment to edge pattern for accessibility (NF-13).
+    
+    Provides visual distinction beyond color for color-blind users.
+    
+    Args:
+        net_sentiment: Net sentiment score from EdgeRecord
+        
+    Returns:
+        False for solid line (positive), or list of dash values for dashed/dotted
+        - Positive: solid line (False)
+        - Neutral: dashed line [5, 5]
+        - Negative: dotted line [2, 2]
+    """
+    if net_sentiment > SENTIMENT_POSITIVE_THRESHOLD:
+        return False  # Solid line for positive sentiment
+    elif net_sentiment < SENTIMENT_NEGATIVE_THRESHOLD:
+        return [2, 2]  # Dotted line for negative sentiment
+    else:
+        return [5, 5]  # Dashed line for neutral sentiment
+
+
 def normalize_metric(
     values: list[float],
     min_size: int = 10,
@@ -293,6 +315,9 @@ def build_force_directed_graph(
         # Color by sentiment
         edge_color = get_sentiment_color(edge.net_sentiment)
         
+        # Pattern by sentiment (NF-13: Accessibility for color-blind users)
+        edge_pattern = get_sentiment_pattern(edge.net_sentiment)
+        
         # Width by mention count
         width = edge_widths[idx] if idx < len(edge_widths) else min_edge_width
         
@@ -302,11 +327,18 @@ def build_force_directed_graph(
             if edge.source_node_id not in highlight_set and edge.target_node_id not in highlight_set:
                 edge_opacity = DIMMED_EDGE_OPACITY
         
-        # Build tooltip
+        # Build tooltip with sentiment pattern explanation
+        sentiment_label = "positive" if edge.net_sentiment > SENTIMENT_POSITIVE_THRESHOLD else (
+            "negative" if edge.net_sentiment < SENTIMENT_NEGATIVE_THRESHOLD else "neutral"
+        )
+        pattern_label = "solid" if edge_pattern is False else (
+            "dotted" if edge_pattern == [2, 2] else "dashed"
+        )
+        
         tooltip = f"""
         <b>{edge.source_node_id} → {edge.target_node_id}</b><br>
         Mentions: {edge.total_mentions}<br>
-        Sentiment: {edge.net_sentiment:+.2f}<br>
+        Sentiment: {edge.net_sentiment:+.2f} ({sentiment_label}, {pattern_label} line)<br>
         Positive: {edge.positive_count}, Neutral: {edge.neutral_count}, Negative: {edge.negative_count}
         """
         
@@ -320,6 +352,7 @@ def build_force_directed_graph(
             },
             width=width,
             value=edge.total_mentions,  # For automatic scaling
+            dashes=edge_pattern,  # NF-13: Pattern for accessibility
         )
     
     return net

@@ -114,8 +114,9 @@ cover/
 *.mo
 *.pot
 
-# Environments
+# Environments and credentials (NF-10: Exclude credentials from version control)
 .env
+.env.*
 .envrc
 .venv
 env/
@@ -123,6 +124,22 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Additional credential patterns (NF-10)
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*_rsa
+*_rsa.pub
+*.gpg
+credentials.*
+secrets.*
+auth_token*
+api_key*
+*.token
 
 # ── EDITORS & TOOLS ────────────────────────────────────────────────────────
 
