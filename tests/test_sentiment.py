@@ -372,6 +372,77 @@ class TestParliamentaryContext:
         assert result.label == SentimentLabel.NEUTRAL
 
 
+class TestProceduralPatternDetection:
+    """Test procedural Chair/Speaker recognition override (Issue #55).
+
+    These tests verify that procedural patterns are classified as NEUTRAL
+    with high confidence, bypassing the zero-shot model entirely.
+    """
+
+    def test_chair_recognizes_is_neutral(self, scorer_with_mock):
+        """Chair recognition should be neutral, not positive."""
+        context = "The Chair recognizes the Honourable Member for Freetown."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+        assert result.confidence == 1.0
+
+    def test_speaker_recognizes_is_neutral(self, scorer_with_mock):
+        """Speaker recognition should be neutral."""
+        context = "The Speaker recognizes the Member for Cat Island."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+
+    def test_i_recognize_the_member(self, scorer_with_mock):
+        """First-person recognition should be neutral."""
+        context = "I recognize the Honourable Member for Marathon."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+
+    def test_non_procedural_not_matched(self, scorer_with_mock):
+        """Non-procedural text should NOT match procedural patterns."""
+        context = "I commend the Prime Minister for his excellent leadership."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.POSITIVE
+
+    def test_british_spelling_recognises(self, scorer_with_mock):
+        """British spelling 'recognises' should also be matched."""
+        context = "The Chair recognises the Honourable Member for Englerston."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+        assert result.confidence == 1.0
+
+    def test_is_procedural_directly(self, scorer_with_mock):
+        """Test _is_procedural method directly for key patterns."""
+        assert scorer_with_mock._is_procedural("The Chair recognizes the member")
+        assert scorer_with_mock._is_procedural("The Chair recognises the member")
+        assert scorer_with_mock._is_procedural("the speaker recognizes the member")
+        assert scorer_with_mock._is_procedural("Madam Speaker recognises the member")
+        assert not scorer_with_mock._is_procedural("I commend the member")
+
+    def test_batch_with_procedural_mix(self, scorer_with_mock):
+        """Batch processing should handle mix of procedural and non-procedural."""
+        contexts = [
+            "The Chair recognizes the Member for Freetown.",
+            "I commend the Prime Minister for his excellent work.",
+            "The Speaker recognises the Honourable Member for Marathon.",
+        ]
+        results = scorer_with_mock.score_batch(contexts)
+        assert len(results) == 3
+        assert results[0].label == SentimentLabel.NEUTRAL
+        assert results[0].confidence == 1.0
+        assert results[1].label == SentimentLabel.POSITIVE
+        assert results[2].label == SentimentLabel.NEUTRAL
+        assert results[2].confidence == 1.0
+
+    def test_batch_procedural_consistent_with_single(self, scorer_with_mock):
+        """score_batch() and score() should produce identical results for procedural text."""
+        procedural = "The Chair recognizes the Honourable Member for Freetown."
+        single_result = scorer_with_mock.score(procedural)
+        batch_results = scorer_with_mock.score_batch([procedural])
+        assert single_result.label == batch_results[0].label
+        assert single_result.confidence == batch_results[0].confidence
+
+
 class TestModelLazyLoading:
     """Test lazy loading behavior."""
 
