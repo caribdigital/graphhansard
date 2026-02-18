@@ -266,6 +266,7 @@ def build_graph_command(args):
     """Handle the build-graph command (Stage 4: Graph Construction)."""
     import json
     from graphhansard.brain.graph_builder import GraphBuilder
+    from graphhansard.brain.validation import validate_output
 
     print(f"Building session graph from: {args.mentions}")
     print(f"Session ID: {args.session_id}")
@@ -330,6 +331,10 @@ def build_graph_command(args):
         builder.export_csv(session_graph, str(csv_path))
         print(f"  CSV: {csv_path}")
 
+    # Validate output
+    if not args.skip_validation:
+        validate_output(session_graph, args.session_id, output_path.parent)
+
 
 def process_command(args):
     """Handle the process command (Full pipeline: Stages 1-5)."""
@@ -337,6 +342,7 @@ def process_command(args):
     from graphhansard.brain.entity_extractor import EntityExtractor
     from graphhansard.brain.sentiment import SentimentScorer
     from graphhansard.brain.graph_builder import GraphBuilder
+    from graphhansard.brain.validation import validate_output
 
     print("=" * 70)
     print("GraphHansard End-to-End Pipeline")
@@ -489,6 +495,10 @@ def process_command(args):
         csv_path = output_dir / f"{args.session_id}_edges.csv"
         builder.export_csv(session_graph, str(csv_path))
         print(f"[OK] CSV: {csv_path}")
+
+    # Validate output
+    if not args.skip_validation:
+        validate_output(session_graph, args.session_id, output_dir)
 
     print("\n" + "=" * 70)
     print("[DONE] Pipeline Complete!")
@@ -645,6 +655,11 @@ def main():
     build_graph_parser.add_argument(
         "--csv", action="store_true", help="Also export CSV edge list"
     )
+    build_graph_parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip output validation after graph building"
+    )
 
     # Process command (Full Pipeline: Stages 1-5)
     process_parser = subparsers.add_parser(
@@ -712,6 +727,11 @@ def main():
         "--export-all",
         action="store_true",
         help="Export all formats (JSON, GraphML, CSV)",
+    )
+    process_parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip output validation after graph building"
     )
 
     args = parser.parse_args()

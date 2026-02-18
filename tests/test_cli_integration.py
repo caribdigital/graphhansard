@@ -240,6 +240,7 @@ def test_build_graph_command():
                 golden_record=None,
                 graphml=False,
                 csv=False,
+                skip_validation=True,
             )
 
             result = build_graph_command(args)
