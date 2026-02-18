@@ -3,7 +3,8 @@
 Implements heuristic-based speaker identity resolution to bridge the gap between
 speaker diarization labels and actual MP identities in the Golden Record.
 
-See Issue #XX for specification and acceptance criteria.
+This addresses the issue where all edges have source_node_id as raw diarization
+labels (SPEAKER_00, SPEAKER_02, etc.) instead of actual MP node IDs.
 """
 
 from __future__ import annotations
@@ -66,7 +67,9 @@ class SpeakerResolver:
         ),
     ]
     
-    # Self-reference indicators
+    # Self-reference indicators (reserved for future enhancement)
+    # TODO: Integrate with entity_extractor's is_self_reference detection
+    # when full implementation is ready
     SELF_REFERENCE_INDICATORS = [
         "I", "my", "me", "myself", "we", "our", "us"
     ]
