@@ -141,14 +141,14 @@ def main():
         
         # Calculate statistics
         resolved = sum(1 for m in mentions if m.target_node_id is not None)
-        unresolved = len(mentions) - resolved
         
         print(f"  [OK] Mentions: {len(mentions)} total, {resolved} resolved")
         
         # Save unresolved mentions log
         unresolved_path = OUTPUT_DIR / f"unresolved_{session_id}.json"
         extractor.save_unresolved_log(str(unresolved_path))
-        print(f"  Unresolved: {unresolved} mentions -> {unresolved_path.name}")
+        unresolved_count = extractor.get_unresolved_count()
+        print(f"  Unresolved: {unresolved_count} mentions -> {unresolved_path.name}")
         
         # Clear unresolved log for next session
         extractor.clear_unresolved_log()
@@ -156,7 +156,7 @@ def main():
         # Update totals
         total_mentions += len(mentions)
         total_resolved += resolved
-        total_unresolved += unresolved
+        total_unresolved += unresolved_count
     
     # Summary
     print("\n" + "=" * 70)
