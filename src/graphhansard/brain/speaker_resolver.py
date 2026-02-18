@@ -276,6 +276,8 @@ class SpeakerResolver:
         """Resolve speakers by recognition-to-speech chaining.
         
         When the Chair recognizes someone, the next speaker is likely that person.
+        Looks ahead up to 3 segments to skip brief interjections and Chair's own
+        segments, with declining confidence for each distance.
         
         Returns:
             Dictionary mapping speaker_label -> SpeakerResolution
@@ -284,6 +286,7 @@ class SpeakerResolver:
 
         for i, segment in enumerate(segments):
             text = segment.get("text", "")
+            chair_speaker = segment.get("speaker_label", "")
 
             # Look for recognition patterns
             for pattern in self.RECOGNITION_PATTERNS:
@@ -295,25 +298,43 @@ class SpeakerResolver:
                     # Try to resolve to an MP
                     resolved_node_id = self._resolve_recognized_entity(recognized_text)
 
-                    if resolved_node_id and i + 1 < len(segments):
-                        # The next speaker is likely this MP
-                        next_segment = segments[i + 1]
-                        next_speaker = next_segment.get("speaker_label", "")
+                    if resolved_node_id:
+                        # Look ahead up to 3 segments (i+1, i+2, i+3)
+                        # with declining confidence: 0.75, 0.65, 0.55
+                        confidences = [0.75, 0.65, 0.55]
 
-                        if next_speaker.startswith("SPEAKER_"):
-                            # Check if this is a substantial speech (not just acknowledgment)
+                        for offset in range(1, 4):
+                            if i + offset >= len(segments):
+                                break
+
+                            next_segment = segments[i + offset]
+                            next_speaker = next_segment.get("speaker_label", "")
                             next_text = next_segment.get("text", "")
-                            if len(next_text.split()) > 10:  # At least 10 words
+
+                            # Skip if not a valid speaker label
+                            if not next_speaker.startswith("SPEAKER_"):
+                                continue
+
+                            # Skip if it's the Chair speaking again
+                            if next_speaker == chair_speaker:
+                                continue
+
+                            # Check if this is a substantial speech (>10 words)
+                            word_count = len(next_text.split())
+                            if word_count > 10:
+                                # Found a substantial speech from a different speaker
                                 resolutions[next_speaker] = SpeakerResolution(
                                     speaker_label=next_speaker,
                                     resolved_node_id=resolved_node_id,
-                                    confidence=0.75,
+                                    confidence=confidences[offset - 1],
                                     method="recognition_chaining",
                                     evidence=[
                                         f"Recognized as '{recognized_text}' in segment {i}",
-                                        f"Began speaking in next segment with {len(next_text.split())} words"
+                                        f"Began speaking in segment {i + offset} with {word_count} words"
                                     ]
                                 )
+                                # Stop looking after finding the first substantial speech
+                                break
 
         return resolutions
 
