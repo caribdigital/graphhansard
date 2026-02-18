@@ -17,7 +17,7 @@ The session metadata automation eliminates the need for hardcoded metadata dicti
 If you already have a metadata JSON file:
 
 ```bash
-python scripts/azure_gpu_process.py archive/ \
+python scripts/batch_transcribe.py archive/ \
     --output-dir output/ \
     --metadata examples/session_metadata.json \
     --model base \
@@ -42,7 +42,7 @@ python scripts/fetch_session_metadata.py urls.txt \
 
 Step 3: Process audio with extracted metadata:
 ```bash
-python scripts/azure_gpu_process.py archive/ \
+python scripts/batch_transcribe.py archive/ \
     --output-dir output/ \
     --metadata sessions.json
 ```
@@ -52,7 +52,7 @@ python scripts/azure_gpu_process.py archive/ \
 Process audio files without metadata (uses video_id from filename as session_id):
 
 ```bash
-python scripts/azure_gpu_process.py archive/ \
+python scripts/batch_transcribe.py archive/ \
     --output-dir output/ \
     --model base
 ```
@@ -94,13 +94,13 @@ The script extracts the video ID from the filename stem (without extension).
 
 ## Script Reference
 
-### `azure_gpu_process.py`
+### `batch_transcribe.py`
 
 **Purpose**: Batch process audio files with GPU acceleration and metadata tracking.
 
 **Usage**:
 ```bash
-python scripts/azure_gpu_process.py <audio_dir> [options]
+python scripts/batch_transcribe.py <audio_dir> [options]
 ```
 
 **Required Arguments**:
@@ -120,7 +120,7 @@ python scripts/azure_gpu_process.py <audio_dir> [options]
 
 **Example**:
 ```bash
-python scripts/azure_gpu_process.py archive/ \
+python scripts/batch_transcribe.py archive/ \
     --output-dir transcripts/ \
     --metadata sessions.json \
     --model large-v3 \
@@ -269,7 +269,7 @@ SESSION_METADATA = {
 
 **New approach** (external JSON file):
 1. Extract the dictionary to `sessions.json`
-2. Run: `python scripts/azure_gpu_process.py archive/ --metadata sessions.json`
+2. Run: `python scripts/batch_transcribe.py archive/ --metadata sessions.json`
 
 **Benefits**:
 - No code changes needed for new sessions
@@ -281,4 +281,4 @@ SESSION_METADATA = {
 
 - [GraphHansard README](../README.md)
 - [Brain Pipeline Documentation](../src/graphhansard/brain/)
-- [Test Examples](../tests/test_azure_gpu_process.py)
+- [Test Examples](../tests/test_batch_transcribe.py)

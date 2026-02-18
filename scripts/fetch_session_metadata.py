@@ -2,7 +2,7 @@
 """Fetch session metadata from YouTube videos using yt-dlp.
 
 This helper script extracts metadata (upload date, title) from YouTube videos
-and generates a JSON file compatible with azure_gpu_process.py.
+and generates a JSON file compatible with batch_transcribe.py.
 
 Usage:
     # From list of URLs in a text file
