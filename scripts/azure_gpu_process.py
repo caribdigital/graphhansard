@@ -47,7 +47,7 @@ def main():
         "--date",
         help="Debate date (ISO format: YYYY-MM-DD) for temporal resolution",
     )
-    
+
     args = parser.parse_args()
     
     # Import here to avoid slow startup if just showing help
