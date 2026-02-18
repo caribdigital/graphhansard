@@ -286,6 +286,7 @@ def build_graph_command(args):
                     "party": mp.get("party", "Unknown"),
                     "constituency": mp.get("constituency"),
                     "current_portfolio": mp.get("current_portfolio"),
+                    "node_type": mp.get("node_type", "debater"),
                 }
 
     # Build graph
@@ -436,6 +437,7 @@ def process_command(args):
                 "party": mp.get("party", "Unknown"),
                 "constituency": mp.get("constituency"),
                 "current_portfolio": mp.get("current_portfolio"),
+                "node_type": mp.get("node_type", "debater"),
             }
 
     builder = GraphBuilder()
