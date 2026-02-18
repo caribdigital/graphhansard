@@ -110,6 +110,134 @@ class TestPatternMatching:
         assert len(mentions) >= 2
 
 
+class TestForeignLeaderDetection:
+    """Test foreign leader detection and exclusion (Issue: Foreign leader mentions)."""
+
+    def test_canadian_prime_minister_not_detected(self, extractor):
+        """Foreign leader 'Canadian prime minister' should NOT be detected as a mention."""
+        text = "The address by the Canadian prime minister was discussed."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        # Should NOT find "Canadian prime minister" or "prime minister" in this context
+        mention_texts = [m[0].lower() for m in mentions]
+        # Ensure we don't have any mention containing "prime minister" 
+        # (because it's qualified as Canadian)
+        assert not any("prime minister" in m for m in mention_texts)
+    
+    def test_british_prime_minister_not_detected(self, extractor):
+        """Foreign leader 'British Prime Minister' should NOT be detected."""
+        text = "The British Prime Minister visited the islands."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("prime minister" in m for m in mention_texts)
+    
+    def test_american_president_not_detected(self, extractor):
+        """Foreign leader 'American President' should NOT be detected."""
+        text = "The American President sent a delegation."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("president" in m for m in mention_texts)
+    
+    def test_jamaican_prime_minister_not_detected(self, extractor):
+        """Foreign leader 'Jamaican Prime Minister' should NOT be detected."""
+        text = "The Jamaican Prime Minister attended the CARICOM summit."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("prime minister" in m for m in mention_texts)
+    
+    def test_unqualified_prime_minister_still_detected(self, extractor):
+        """Unqualified 'Prime Minister' should still be detected."""
+        text = "The Prime Minister announced new policies."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        # Should find "The Prime Minister"
+        assert len(mentions) > 0
+        mention_texts = [m[0] for m in mentions]
+        assert any("Prime Minister" in m for m in mention_texts)
+    
+    def test_unqualified_prime_minister_resolves_correctly(self, extractor):
+        """Unqualified 'Prime Minister' should resolve to Bahamian PM."""
+        segment = {
+            "text": "The Prime Minister made an announcement.",
+            "speaker_node_id": "mp_thompson_iram",
+            "start_time": 10.0,
+            "end_time": 15.0,
+        }
+        segments = [segment]
+        
+        mentions = extractor._extract_from_segment(
+            segment, 0, "test_session", segments, None
+        )
+        
+        # Should find and resolve "The Prime Minister" to Brave Davis
+        assert len(mentions) > 0
+        pm_mentions = [m for m in mentions if "Prime Minister" in m.raw_mention]
+        assert len(pm_mentions) > 0
+        assert pm_mentions[0].target_node_id == "mp_davis_brave"
+    
+    def test_french_president_not_detected(self, extractor):
+        """Foreign leader 'French President' should NOT be detected."""
+        text = "The French President spoke at the climate summit."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("president" in m for m in mention_texts)
+    
+    def test_cuban_president_not_detected(self, extractor):
+        """Foreign leader 'Cuban President' should NOT be detected."""
+        text = "The Cuban President discussed trade relations."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("president" in m for m in mention_texts)
+    
+    def test_mixed_foreign_and_local_leaders(self, extractor):
+        """Text with both foreign and local leaders handles correctly."""
+        text = "The Prime Minister met with the Canadian prime minister and the British Prime Minister."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        # Should only find the first "The Prime Minister" (Bahamian)
+        # but NOT the Canadian or British ones
+        assert len(mentions) == 1
+        mention_texts = [m[0] for m in mentions]
+        assert "The Prime Minister" in mention_texts[0]
+    
+    def test_haitian_president_not_detected(self, extractor):
+        """Foreign leader 'Haitian President' should NOT be detected."""
+        text = "The Haitian President requested assistance."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("president" in m for m in mention_texts)
+    
+    def test_trinidadian_prime_minister_not_detected(self, extractor):
+        """Foreign leader 'Trinidadian Prime Minister' should NOT be detected."""
+        text = "The Trinidadian Prime Minister addressed the conference."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("prime minister" in m for m in mention_texts)
+
+    def test_generic_nationality_suffix_pattern(self, extractor):
+        """Generic nationality suffixes (e.g., -ian, -ese) are detected."""
+        text = "The Norwegian Prime Minister visited. The Chinese President spoke."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        # Should NOT detect either foreign leader
+        assert len(mentions) == 0
+
+    def test_lowercase_foreign_leader(self, extractor):
+        """Foreign leaders with lowercase qualifiers should also be excluded."""
+        text = "The statement from the canadian prime minister was noted."
+        mentions = extractor._extract_pattern_mentions(text)
+        
+        mention_texts = [m[0].lower() for m in mentions]
+        assert not any("prime minister" in m for m in mention_texts)
+
+
 class TestMentionDeduplication:
     """Test mention deduplication logic."""
 

@@ -113,6 +113,18 @@ class EntityExtractor:
         ),
     }
     
+    # Foreign leader pattern - detects nationality qualifiers before titles
+    # This prevents foreign leaders from being resolved to Bahamian MPs
+    FOREIGN_LEADER_PATTERN = re.compile(
+        r"(?:the\s+)?(?:Canadian|British|American|French|Cuban|Haitian|Jamaican|"
+        r"Trinidadian|Barbadian|Dominican|Mexican|European|Russian|Chinese|"
+        r"Indian|German|Italian|Spanish|Australian|New\s+Zealand|"
+        r"[A-Z][a-z]+(?:ian|ese|ish|an))\s+"
+        r"(?:Prime\s+Minister|President|Chancellor|Premier|King|Queen|"
+        r"Minister|Leader|Foreign\s+Minister|Defence\s+Minister)",
+        re.IGNORECASE,
+    )
+    
     # Deictic/Anaphoric reference patterns (BR-11)
     DEICTIC_PATTERNS = {
         "member_who_spoke": re.compile(
@@ -412,11 +424,19 @@ class EntityExtractor:
 
         Deictic patterns (BR-11) are processed first and take priority
         over standard patterns to prevent greedy capture pollution.
+        
+        Foreign leader references (e.g., "the Canadian prime minister") are 
+        detected and excluded to prevent false-positive resolutions to Bahamian MPs.
 
         Returns:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
+
+        # Phase 0: Identify foreign leader ranges to exclude
+        foreign_leader_ranges = []
+        for match in self.FOREIGN_LEADER_PATTERN.finditer(text):
+            foreign_leader_ranges.append((match.start(), match.end()))
 
         # Phase 1: Extract deictic/anaphoric patterns first (BR-11) — they take priority
         deictic_ranges = []
@@ -430,7 +450,7 @@ class EntityExtractor:
                     mentions.append((mention_text, char_start, char_end))
                     deictic_ranges.append((char_start, char_end))
 
-        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps
+        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps and foreign leaders
         for pattern_name, pattern in self.PATTERNS.items():
             if pattern_name == "point_of_order":
                 continue  # Handled by detect_point_of_order(), not as MP mention
@@ -456,6 +476,14 @@ class EntityExtractor:
                     for d_start, d_end in deictic_ranges
                 )
                 if overlaps_deictic:
+                    continue
+                
+                # Skip if overlaps with a foreign leader reference
+                overlaps_foreign = any(
+                    not (char_end <= f_start or char_start >= f_end)
+                    for f_start, f_end in foreign_leader_ranges
+                )
+                if overlaps_foreign:
                     continue
 
                 # Only add if mention is substantial (at least 5 chars)
