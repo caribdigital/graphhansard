@@ -166,7 +166,10 @@ def main():
     print(f"Total mentions: {total_mentions}")
     print(f"Total resolved: {total_resolved}")
     print(f"Total unresolved: {total_unresolved}")
-    print(f"Resolution rate: {total_resolved/total_mentions*100:.1f}%" if total_mentions > 0 else "N/A")
+    if total_mentions > 0:
+        print(f"Resolution rate: {total_resolved/total_mentions*100:.1f}%")
+    else:
+        print("Resolution rate: 0.0%")
     print(f"\nOutput directory: {OUTPUT_DIR}")
     print(f"  - Mention files: {len(transcript_files)} x *_mentions.json")
     print(f"  - Unresolved logs: {len(transcript_files)} x unresolved_*.json")
