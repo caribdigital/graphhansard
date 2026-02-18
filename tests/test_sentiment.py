@@ -4,7 +4,6 @@ Tests sentiment classification, parliamentary marker detection, and confidence s
 See Issue #12 (BR-16 through BR-20).
 """
 
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -24,26 +23,61 @@ def scorer():
 @pytest.fixture
 def mock_pipeline():
     """Create a mock pipeline for testing without internet access."""
-    def _mock_pipeline(text, candidate_labels, multi_label=False):
+    def _mock_pipeline(text, candidate_labels, multi_label=False, batch_size=None):
         # Simple rule-based mock for testing
-        text_lower = text.lower()
-        
-        if any(word in text_lower for word in ["commend", "excellent", "support", "outstanding", "praise"]):
-            return {
-                "labels": ["supportive reference", "neutral or procedural reference", "hostile or critical reference"],
-                "scores": [0.85, 0.10, 0.05]
-            }
-        elif any(word in text_lower for word in ["failed", "reckless", "misguided", "disaster", "critical"]):
-            return {
-                "labels": ["hostile or critical reference", "neutral or procedural reference", "supportive reference"],
-                "scores": [0.80, 0.15, 0.05]
-            }
+        # Handle both single text and batch processing
+        def _classify_text(txt):
+            txt_lower = txt.lower()
+
+            positive_words = [
+                "commend",
+                "excellent",
+                "support",
+                "outstanding",
+                "praise",
+            ]
+            negative_words = [
+                "failed",
+                "reckless",
+                "misguided",
+                "disaster",
+                "critical",
+            ]
+
+            if any(word in txt_lower for word in positive_words):
+                return {
+                    "labels": [
+                        "supportive reference",
+                        "neutral or procedural reference",
+                        "hostile or critical reference",
+                    ],
+                    "scores": [0.85, 0.10, 0.05],
+                }
+            elif any(word in txt_lower for word in negative_words):
+                return {
+                    "labels": [
+                        "hostile or critical reference",
+                        "neutral or procedural reference",
+                        "supportive reference",
+                    ],
+                    "scores": [0.80, 0.15, 0.05],
+                }
+            else:
+                return {
+                    "labels": [
+                        "neutral or procedural reference",
+                        "supportive reference",
+                        "hostile or critical reference",
+                    ],
+                    "scores": [0.75, 0.15, 0.10],
+                }
+
+        # Support batch processing (list input)
+        if isinstance(text, list):
+            return [_classify_text(t) for t in text]
         else:
-            return {
-                "labels": ["neutral or procedural reference", "supportive reference", "hostile or critical reference"],
-                "scores": [0.75, 0.15, 0.10]
-            }
-    
+            return _classify_text(text)
+
     return _mock_pipeline
 
 
@@ -68,6 +102,49 @@ class TestSentimentScorerInit:
         """Scorer accepts custom model name."""
         scorer = SentimentScorer(model_name="custom/model")
         assert scorer.model_name == "custom/model"
+
+    def test_scorer_default_device_none(self):
+        """Scorer initializes with device=None by default."""
+        scorer = SentimentScorer()
+        assert scorer._device is None
+
+    def test_scorer_cpu_device(self):
+        """Scorer accepts device='cpu' parameter."""
+        scorer = SentimentScorer(device="cpu")
+        assert scorer._device == "cpu"
+
+    def test_scorer_gpu_device(self):
+        """Scorer accepts device='gpu' parameter."""
+        scorer = SentimentScorer(device="gpu")
+        assert scorer._device == "gpu"
+
+    def test_scorer_cuda_device(self):
+        """Scorer accepts device='cuda' parameter."""
+        scorer = SentimentScorer(device="cuda")
+        assert scorer._device == "cuda"
+
+    def test_scorer_numeric_device(self):
+        """Scorer accepts numeric device ID as integer."""
+        scorer = SentimentScorer(device=0)
+        assert scorer._device == 0
+
+
+class TestDeviceSelection:
+    """Test device selection logic."""
+
+    def test_device_parameter_stored(self):
+        """Device parameter is stored correctly."""
+        scorer_cpu = SentimentScorer(device="cpu")
+        assert scorer_cpu._device == "cpu"
+
+        scorer_gpu = SentimentScorer(device="gpu")
+        assert scorer_gpu._device == "gpu"
+
+        scorer_none = SentimentScorer(device=None)
+        assert scorer_none._device is None
+
+        scorer_numeric = SentimentScorer(device="1")
+        assert scorer_numeric._device == "1"
 
 
 class TestSentimentClassification:
@@ -127,7 +204,10 @@ class TestParliamentaryMarkers:
 
     def test_point_of_order_detection(self, scorer_with_mock):
         """Detects 'point of order' markers."""
-        context = "On a point of order, Mr. Speaker! The Member has misstated the facts."
+        context = (
+            "On a point of order, Mr. Speaker! "
+            "The Member has misstated the facts."
+        )
         result = scorer_with_mock.score(context)
 
         assert "point_of_order" in result.parliamentary_markers
@@ -207,7 +287,7 @@ class TestEdgeCases:
     def test_empty_context(self, scorer_with_mock):
         """Handles empty context string."""
         result = scorer_with_mock.score("")
-        
+
         # Should still return a result (likely neutral)
         assert isinstance(result, SentimentResult)
         assert result.label in [
@@ -219,7 +299,7 @@ class TestEdgeCases:
     def test_very_short_context(self, scorer_with_mock):
         """Handles very short context."""
         result = scorer_with_mock.score("Good.")
-        
+
         assert isinstance(result, SentimentResult)
         assert 0.0 <= result.confidence <= 1.0
 
@@ -232,9 +312,9 @@ class TestEdgeCases:
             "The data he presents does not support his argument.",
             "We must consider alternative approaches to this issue.",
         ])
-        
+
         result = scorer_with_mock.score(context)
-        
+
         assert isinstance(result, SentimentResult)
         assert 0.0 <= result.confidence <= 1.0
 
@@ -250,9 +330,9 @@ class TestIntegrationWithMentionRecords:
             "for his outstanding work on the education committee. "
             "His dedication to our students is truly commendable."
         )
-        
+
         result = scorer_with_mock.score(context)
-        
+
         assert result.label == SentimentLabel.POSITIVE
         assert result.confidence > 0.5  # Should be confident
 
@@ -267,7 +347,7 @@ class TestParliamentaryContext:
             "the Member for Englerston, for his passionate advocacy "
             "on behalf of his constituents."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.POSITIVE
 
@@ -277,7 +357,7 @@ class TestParliamentaryContext:
             "Mr. Speaker, the Minister has failed to answer the question. "
             "This is yet another example of this government's lack of transparency."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.NEGATIVE
 
@@ -287,9 +367,80 @@ class TestParliamentaryContext:
             "Mr. Speaker, the Attorney General tabled the bill yesterday. "
             "It will be debated in committee next Tuesday."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.NEUTRAL
+
+
+class TestProceduralPatternDetection:
+    """Test procedural Chair/Speaker recognition override (Issue #55).
+
+    These tests verify that procedural patterns are classified as NEUTRAL
+    with high confidence, bypassing the zero-shot model entirely.
+    """
+
+    def test_chair_recognizes_is_neutral(self, scorer_with_mock):
+        """Chair recognition should be neutral, not positive."""
+        context = "The Chair recognizes the Honourable Member for Freetown."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+        assert result.confidence == 1.0
+
+    def test_speaker_recognizes_is_neutral(self, scorer_with_mock):
+        """Speaker recognition should be neutral."""
+        context = "The Speaker recognizes the Member for Cat Island."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+
+    def test_i_recognize_the_member(self, scorer_with_mock):
+        """First-person recognition should be neutral."""
+        context = "I recognize the Honourable Member for Marathon."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+
+    def test_non_procedural_not_matched(self, scorer_with_mock):
+        """Non-procedural text should NOT match procedural patterns."""
+        context = "I commend the Prime Minister for his excellent leadership."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.POSITIVE
+
+    def test_british_spelling_recognises(self, scorer_with_mock):
+        """British spelling 'recognises' should also be matched."""
+        context = "The Chair recognises the Honourable Member for Englerston."
+        result = scorer_with_mock.score(context)
+        assert result.label == SentimentLabel.NEUTRAL
+        assert result.confidence == 1.0
+
+    def test_is_procedural_directly(self, scorer_with_mock):
+        """Test _is_procedural method directly for key patterns."""
+        assert scorer_with_mock._is_procedural("The Chair recognizes the member")
+        assert scorer_with_mock._is_procedural("The Chair recognises the member")
+        assert scorer_with_mock._is_procedural("the speaker recognizes the member")
+        assert scorer_with_mock._is_procedural("Madam Speaker recognises the member")
+        assert not scorer_with_mock._is_procedural("I commend the member")
+
+    def test_batch_with_procedural_mix(self, scorer_with_mock):
+        """Batch processing should handle mix of procedural and non-procedural."""
+        contexts = [
+            "The Chair recognizes the Member for Freetown.",
+            "I commend the Prime Minister for his excellent work.",
+            "The Speaker recognises the Honourable Member for Marathon.",
+        ]
+        results = scorer_with_mock.score_batch(contexts)
+        assert len(results) == 3
+        assert results[0].label == SentimentLabel.NEUTRAL
+        assert results[0].confidence == 1.0
+        assert results[1].label == SentimentLabel.POSITIVE
+        assert results[2].label == SentimentLabel.NEUTRAL
+        assert results[2].confidence == 1.0
+
+    def test_batch_procedural_consistent_with_single(self, scorer_with_mock):
+        """score_batch() and score() should produce identical results for procedural text."""
+        procedural = "The Chair recognizes the Honourable Member for Freetown."
+        single_result = scorer_with_mock.score(procedural)
+        batch_results = scorer_with_mock.score_batch([procedural])
+        assert single_result.label == batch_results[0].label
+        assert single_result.confidence == batch_results[0].confidence
 
 
 class TestModelLazyLoading:

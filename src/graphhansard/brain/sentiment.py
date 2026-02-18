@@ -6,20 +6,20 @@ context window. See SRD §8.4 (BR-16 through BR-20).
 Usage Example:
     >>> from graphhansard.brain.sentiment import SentimentScorer
     >>> scorer = SentimentScorer()
-    >>> 
+    >>>
     >>> # Score a single context window
     >>> context = "I commend the Prime Minister for his excellent work on this bill."
     >>> result = scorer.score(context)
     >>> print(result.label)  # SentimentLabel.POSITIVE
     >>> print(result.confidence)  # 0.85
-    >>> 
+    >>>
     >>> # Score multiple contexts in batch
     >>> contexts = [
     ...     "The Minister has failed to answer the question.",
     ...     "The Attorney General tabled the bill yesterday.",
     ... ]
     >>> results = scorer.score_batch(contexts)
-    >>> 
+    >>>
     >>> # Check for parliamentary markers
     >>> context_with_markers = "On a point of order! The Member is out of line."
     >>> result = scorer.score(context_with_markers)
@@ -34,16 +34,18 @@ Usage Example:
 Integration with Entity Extraction:
     >>> from graphhansard.brain.entity_extractor import EntityExtractor
     >>> from graphhansard.brain.sentiment import SentimentScorer
-    >>> 
+    >>>
     >>> # Extract mentions from transcript
     >>> extractor = EntityExtractor('path/to/mps.json')
     >>> mentions = extractor.extract_mentions(transcript)
-    >>> 
+    >>>
     >>> # Score sentiment for each mention
     >>> scorer = SentimentScorer()
     >>> for mention in mentions:
     ...     sentiment = scorer.score(mention.context_window)
-    ...     print(f"{mention.raw_mention}: {sentiment.label} ({sentiment.confidence:.2f})")
+    ...     label = sentiment.label
+    ...     conf = sentiment.confidence
+    ...     print(f"{mention.raw_mention}: {label} ({conf:.2f})")
 
 Notes:
     - Model is lazily loaded on first use to save memory
@@ -136,14 +138,21 @@ class SentimentScorer:
         "mr. speaker recognises",
     ]
 
-    def __init__(self, model_name: str = "facebook/bart-large-mnli"):
+    def __init__(
+        self, model_name: str = "facebook/bart-large-mnli", device: str | None = None
+    ):
         """Initialize the sentiment scorer.
 
         Args:
             model_name: HuggingFace model identifier for zero-shot classification.
                        Default is facebook/bart-large-mnli for v1.0.
+            device: Device to use for inference. Options:
+                   - None: Auto-detect (GPU if available, else CPU)
+                   - "cpu": Force CPU
+                   - "cuda" or "gpu": Force GPU
         """
         self.model_name = model_name
+        self._device = device
         self.pipeline = None
         self._labels = [
             "supportive reference",
@@ -155,6 +164,7 @@ class SentimentScorer:
         """Lazy load the model pipeline on first use."""
         if self.pipeline is None:
             try:
+                import torch
                 from transformers import pipeline
             except ImportError as e:
                 raise ImportError(
@@ -162,10 +172,39 @@ class SentimentScorer:
                     "Install with: pip install transformers"
                 ) from e
 
+            # Determine device
+            if self._device is None:
+                # Auto-detect: GPU if available, else CPU
+                device = 0 if torch.cuda.is_available() else -1
+            elif isinstance(self._device, str):
+                device_lower = self._device.lower()
+                if device_lower == "cpu":
+                    device = -1
+                elif device_lower in ("cuda", "gpu"):
+                    device = 0
+                else:
+                    # Allow numeric device IDs (e.g., "0", "1")
+                    try:
+                        device = int(self._device)
+                    except ValueError:
+                        import warnings
+
+                        warnings.warn(
+                            f"Invalid device '{self._device}'. "
+                            f"Expected 'cpu', 'cuda', 'gpu', or numeric ID. "
+                            f"Defaulting to CPU.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                        device = -1
+            else:
+                # Handle numeric device IDs passed as integers
+                device = int(self._device)
+
             self.pipeline = pipeline(
                 "zero-shot-classification",
                 model=self.model_name,
-                device=-1,  # CPU only for now
+                device=device,
             )
 
     def score(self, context_window: str) -> SentimentResult:
@@ -196,6 +235,18 @@ class SentimentScorer:
             multi_label=False,
         )
 
+        return self._parse_result(result, context_window)
+
+    def _parse_result(self, result: dict, context_window: str) -> SentimentResult:
+        """Parse pipeline result into SentimentResult.
+
+        Args:
+            result: Output from pipeline (dict with 'labels' and 'scores').
+            context_window: Original context text for marker detection.
+
+        Returns:
+            SentimentResult with label, confidence, and parliamentary markers.
+        """
         # Map model output to our sentiment labels
         top_label = result["labels"][0]
         confidence = result["scores"][0]
@@ -216,16 +267,56 @@ class SentimentScorer:
             parliamentary_markers=markers,
         )
 
-    def score_batch(self, contexts: list[str]) -> list[SentimentResult]:
+    def score_batch(
+        self, contexts: list[str], batch_size: int = 32
+    ) -> list[SentimentResult]:
         """Classify sentiment for a batch of context windows.
+
+        Procedural patterns (Issue #55) are handled first without calling the
+        model. Remaining contexts are sent through the pipeline in batches.
 
         Args:
             contexts: List of context window strings.
+            batch_size: Number of samples to process in each batch (default: 32).
+                       Larger batches are faster but use more memory.
 
         Returns:
             List of SentimentResult objects in the same order.
         """
-        return [self.score(context) for context in contexts]
+        if not contexts:
+            return []
+
+        # Partition into procedural and non-procedural contexts
+        results: list[SentimentResult | None] = [None] * len(contexts)
+        non_procedural: list[tuple[int, str]] = []
+
+        for i, ctx in enumerate(contexts):
+            if self._is_procedural(ctx):
+                markers = self._detect_markers(ctx)
+                results[i] = SentimentResult(
+                    label=SentimentLabel.NEUTRAL,
+                    confidence=1.0,
+                    parliamentary_markers=markers,
+                )
+            else:
+                non_procedural.append((i, ctx))
+
+        # Batch-process non-procedural contexts through the model
+        if non_procedural:
+            self._load_model()
+
+            batch_texts = [ctx for _, ctx in non_procedural]
+            pipeline_results = self.pipeline(
+                batch_texts,
+                candidate_labels=self._labels,
+                multi_label=False,
+                batch_size=batch_size,
+            )
+
+            for (i, ctx), r in zip(non_procedural, pipeline_results):
+                results[i] = self._parse_result(r, ctx)
+
+        return results  # type: ignore[return-value]
 
     def _is_procedural(self, text: str) -> bool:
         """Check if text contains procedural Chair/Speaker recognition patterns.
