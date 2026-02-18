@@ -24,25 +24,33 @@ def scorer():
 @pytest.fixture
 def mock_pipeline():
     """Create a mock pipeline for testing without internet access."""
-    def _mock_pipeline(text, candidate_labels, multi_label=False):
+    def _mock_pipeline(text, candidate_labels, multi_label=False, batch_size=None):
         # Simple rule-based mock for testing
-        text_lower = text.lower()
+        # Handle both single text and batch processing
+        def _classify_text(txt):
+            txt_lower = txt.lower()
+            
+            if any(word in txt_lower for word in ["commend", "excellent", "support", "outstanding", "praise"]):
+                return {
+                    "labels": ["supportive reference", "neutral or procedural reference", "hostile or critical reference"],
+                    "scores": [0.85, 0.10, 0.05]
+                }
+            elif any(word in txt_lower for word in ["failed", "reckless", "misguided", "disaster", "critical"]):
+                return {
+                    "labels": ["hostile or critical reference", "neutral or procedural reference", "supportive reference"],
+                    "scores": [0.80, 0.15, 0.05]
+                }
+            else:
+                return {
+                    "labels": ["neutral or procedural reference", "supportive reference", "hostile or critical reference"],
+                    "scores": [0.75, 0.15, 0.10]
+                }
         
-        if any(word in text_lower for word in ["commend", "excellent", "support", "outstanding", "praise"]):
-            return {
-                "labels": ["supportive reference", "neutral or procedural reference", "hostile or critical reference"],
-                "scores": [0.85, 0.10, 0.05]
-            }
-        elif any(word in text_lower for word in ["failed", "reckless", "misguided", "disaster", "critical"]):
-            return {
-                "labels": ["hostile or critical reference", "neutral or procedural reference", "supportive reference"],
-                "scores": [0.80, 0.15, 0.05]
-            }
+        # Support batch processing (list input)
+        if isinstance(text, list):
+            return [_classify_text(t) for t in text]
         else:
-            return {
-                "labels": ["neutral or procedural reference", "supportive reference", "hostile or critical reference"],
-                "scores": [0.75, 0.15, 0.10]
-            }
+            return _classify_text(text)
     
     return _mock_pipeline
 
@@ -68,6 +76,44 @@ class TestSentimentScorerInit:
         """Scorer accepts custom model name."""
         scorer = SentimentScorer(model_name="custom/model")
         assert scorer.model_name == "custom/model"
+
+    def test_scorer_default_device_none(self):
+        """Scorer initializes with device=None by default."""
+        scorer = SentimentScorer()
+        assert scorer._device is None
+
+    def test_scorer_cpu_device(self):
+        """Scorer accepts device='cpu' parameter."""
+        scorer = SentimentScorer(device="cpu")
+        assert scorer._device == "cpu"
+
+    def test_scorer_gpu_device(self):
+        """Scorer accepts device='gpu' parameter."""
+        scorer = SentimentScorer(device="gpu")
+        assert scorer._device == "gpu"
+
+    def test_scorer_cuda_device(self):
+        """Scorer accepts device='cuda' parameter."""
+        scorer = SentimentScorer(device="cuda")
+        assert scorer._device == "cuda"
+
+
+class TestDeviceSelection:
+    """Test device selection logic."""
+
+    def test_device_parameter_stored(self):
+        """Device parameter is stored correctly."""
+        scorer_cpu = SentimentScorer(device="cpu")
+        assert scorer_cpu._device == "cpu"
+        
+        scorer_gpu = SentimentScorer(device="gpu")
+        assert scorer_gpu._device == "gpu"
+        
+        scorer_none = SentimentScorer(device=None)
+        assert scorer_none._device is None
+        
+        scorer_numeric = SentimentScorer(device="1")
+        assert scorer_numeric._device == "1"
 
 
 class TestSentimentClassification:
