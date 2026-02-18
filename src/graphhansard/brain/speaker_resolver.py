@@ -176,6 +176,14 @@ class SpeakerResolver:
         # Heuristic 4: Portfolio Fingerprinting (basic implementation)
         portfolio_resolutions = self._resolve_by_portfolio(segments)
 
+        # Detect conflicts before merging
+        self._log_resolution_conflicts(
+            portfolio_resolutions,
+            self_reference_resolutions,
+            recognition_resolutions,
+            chair_candidates
+        )
+
         # Merge resolutions with confidence-based prioritization
         all_resolutions = {
             **portfolio_resolutions,
@@ -458,6 +466,58 @@ class SpeakerResolver:
                     )
 
         return resolutions
+
+    def _log_resolution_conflicts(
+        self,
+        portfolio_resolutions: dict[str, SpeakerResolution],
+        self_reference_resolutions: dict[str, SpeakerResolution],
+        recognition_resolutions: dict[str, SpeakerResolution],
+        chair_candidates: dict[str, SpeakerResolution]
+    ) -> None:
+        """Log conflicts when different heuristics resolve the same speaker to different MPs.
+
+        Args:
+            portfolio_resolutions: Resolutions from portfolio fingerprinting
+            self_reference_resolutions: Resolutions from self-reference detection
+            recognition_resolutions: Resolutions from recognition chaining
+            chair_candidates: Resolutions from chair detection
+        """
+        # Group all resolutions by speaker_label
+        # Priority order: chair > recognition > self_ref > portfolio
+        heuristics = [
+            ("portfolio_fingerprinting", portfolio_resolutions),
+            ("self_reference", self_reference_resolutions),
+            ("recognition_chaining", recognition_resolutions),
+            ("chair_detection", chair_candidates),
+        ]
+
+        # Collect all speakers that appear in multiple heuristics
+        speaker_to_resolutions: dict[str, list] = defaultdict(list)
+        for method_name, resolutions in heuristics:
+            for speaker_label, resolution in resolutions.items():
+                speaker_to_resolutions[speaker_label].append((method_name, resolution))
+
+        # Log conflicts for speakers with multiple resolutions
+        for speaker_label, resolution_list in speaker_to_resolutions.items():
+            if len(resolution_list) > 1:
+                # Check if they resolve to different node_ids
+                resolved_ids = set(res.resolved_node_id for _, res in resolution_list)
+                if len(resolved_ids) > 1:
+                    # We have a conflict - different heuristics disagree
+                    logger.warning(
+                        f"Conflict for {speaker_label}: multiple heuristics resolved to different MPs"
+                    )
+                    for method_name, resolution in resolution_list:
+                        logger.warning(
+                            f"  {method_name}: {resolution.resolved_node_id} "
+                            f"(confidence: {resolution.confidence:.2f})"
+                        )
+                    # Indicate which one will win based on priority
+                    winner = resolution_list[-1]  # Last one in priority order wins
+                    logger.warning(
+                        f"  Resolution: {winner[1].resolved_node_id} from {winner[0]} "
+                        f"(priority: chair > recognition > self_ref > portfolio)"
+                    )
 
     def apply_resolutions(
         self,
