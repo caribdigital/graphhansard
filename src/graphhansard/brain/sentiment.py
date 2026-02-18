@@ -24,6 +24,12 @@ Usage Example:
     >>> context_with_markers = "On a point of order! The Member is out of line."
     >>> result = scorer.score(context_with_markers)
     >>> print(result.parliamentary_markers)  # ['point_of_order', 'heckling']
+    >>> 
+    >>> # Procedural Chair/Speaker recognition (Issue #54)
+    >>> procedural = "The Chair recognizes the Honourable Member for Freetown."
+    >>> result = scorer.score(procedural)
+    >>> print(result.label)  # SentimentLabel.NEUTRAL (pattern-based, skips model)
+    >>> print(result.confidence)  # 1.0
 
 Integration with Entity Extraction:
     >>> from graphhansard.brain.entity_extractor import EntityExtractor
@@ -41,6 +47,8 @@ Integration with Entity Extraction:
 
 Notes:
     - Model is lazily loaded on first use to save memory
+    - Procedural Chair/Speaker recognition patterns are detected first and assigned
+      neutral sentiment without calling the model (Issue #54)
     - Zero-shot classification uses facebook/bart-large-mnli by default
     - Parliamentary markers are detected using pattern matching (case-insensitive)
     - Confidence scores range from 0.0 to 1.0
