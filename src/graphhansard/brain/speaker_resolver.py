@@ -44,25 +44,30 @@ class SpeakerResolver:
     """
     
     # Patterns for chair detection
+    # Both American ("recognize") and British ("recognise") spellings are
+    # handled via recogni[sz]e to match Whisper transcription variation.
+    # "Honorable" (American) and "Honourable" (British) are both accepted.
     CHAIR_PATTERNS = [
-        re.compile(r"The\s+Chair\s+recognizes?", re.IGNORECASE),
-        re.compile(r"I\s+recognize\s+the\s+(?:Honourable|Hon\.?|Member)", re.IGNORECASE),
-        re.compile(r"(?:Madam|Mr\.?)\s+Speaker\s+(?:yields|recognizes)", re.IGNORECASE),
+        re.compile(r"The\s+Chair\s+recogni[sz]es?", re.IGNORECASE),
+        re.compile(r"I\s+recogni[sz]e\s+the\s+(?:Honou?rable|Hon\.?|Member)", re.IGNORECASE),
+        re.compile(r"(?:Madam|Mr\.?)\s+Speaker\s+(?:yields|recogni[sz]es)", re.IGNORECASE),
         re.compile(r"The\s+(?:Member|Minister)\s+(?:has|will\s+have)\s+the\s+floor", re.IGNORECASE),
         re.compile(r"Order,?\s+order", re.IGNORECASE),
         re.compile(r"The\s+House\s+(?:will\s+(?:come\s+to\s+)?order|is\s+now\s+in\s+session)", re.IGNORECASE),
     ]
-    
+
     # Patterns for recognition statements
+    # Capture group is non-greedy and stops at sentence-ending punctuation
+    # to avoid capturing trailing clause text (e.g. "to speak on this matter").
     RECOGNITION_PATTERNS = [
         # "The Chair recognizes the Member for [constituency]"
         re.compile(
-            r"(?:The\s+Chair|I)\s+recognizes?\s+(?:the\s+)?(?:Honourable|Hon\.?|Member)\s+(?:for\s+)?([A-Z][A-Za-z\s,&]+)",
+            r"(?:The\s+Chair|I)\s+recogni[sz]es?\s+(?:the\s+)?(?:Honou?rable|Hon\.?|Member)\s+(?:for\s+)?([A-Z][A-Za-z\s,&]+?)(?:\s+(?:to|who|on|for\s+(?:his|her|their))|\.|,\s+(?:who|the)|$)",
             re.IGNORECASE
         ),
         # "The Honourable [Name] has the floor"
         re.compile(
-            r"(?:The\s+)?(?:Honourable|Hon\.?)\s+([A-Z][A-Za-z\s\.]+)\s+(?:has|will\s+have)\s+the\s+floor",
+            r"(?:The\s+)?(?:Honou?rable|Hon\.?)\s+([A-Z][A-Za-z\s\.]+)\s+(?:has|will\s+have)\s+the\s+floor",
             re.IGNORECASE
         ),
     ]
@@ -311,15 +316,19 @@ class SpeakerResolver:
         if text_lower in self.name_to_mp:
             return self.name_to_mp[text_lower]
         
-        # Try partial constituency match
-        for constituency, node_id in self.constituency_to_mp.items():
-            if text_lower in constituency or constituency in text_lower:
-                return node_id
-        
-        # Try partial name match
-        for name, node_id in self.name_to_mp.items():
-            if text_lower in name or name in text_lower:
-                return node_id
+        # Try partial constituency match — require the query to be a
+        # meaningful substring (>=5 chars) to avoid false positives like
+        # "Nassau" matching "nassau village".
+        if len(text_lower) >= 5:
+            for constituency, node_id in self.constituency_to_mp.items():
+                if text_lower in constituency or constituency in text_lower:
+                    return node_id
+
+        # Try partial name match (same minimum length guard)
+        if len(text_lower) >= 5:
+            for name, node_id in self.name_to_mp.items():
+                if text_lower in name or name in text_lower:
+                    return node_id
         
         return None
     

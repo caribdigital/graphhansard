@@ -191,7 +191,7 @@ class TestRecognitionChaining:
     def test_recognize_by_name(self, resolver, sample_transcript_with_recognition):
         """Recognizes speaker by name mention."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_recognition)
-        
+
         # SPEAKER_01 should be Fred Mitchell
         assert "SPEAKER_01" in resolutions
         resolution = resolutions["SPEAKER_01"]
@@ -201,17 +201,90 @@ class TestRecognitionChaining:
     def test_recognize_by_constituency(self, resolver, sample_transcript_with_recognition):
         """Recognizes speaker by constituency mention."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_recognition)
-        
+
         # SPEAKER_02 should be Chester Cooper (Exumas and Ragged Island)
         assert "SPEAKER_02" in resolutions
         resolution = resolutions["SPEAKER_02"]
         assert resolution.resolved_node_id == "mp_cooper_chester"
         assert resolution.method == "recognition_chaining"
 
+    def test_british_spelling_recognises(self, resolver):
+        """Recognition chaining works with British spelling 'recognises'."""
+        transcript = {
+            "session_id": "test_british",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognises the Honourable Member for Freetown.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to discuss infrastructure development in my constituency.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        # SPEAKER_00 should be detected as Chair (recognises pattern)
+        assert "SPEAKER_00" in resolutions
+        assert resolutions["SPEAKER_00"].resolved_node_id == "mp_deveaux_patricia"
+        # SPEAKER_01 should be chained to Freetown MP
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_munroe_wayne"
+
+    def test_american_spelling_honorable(self, resolver):
+        """Recognition chaining works with American spelling 'Honorable'."""
+        transcript = {
+            "session_id": "test_american",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Honorable Member for Elizabeth.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to discuss the development plans for our constituency.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_coleby_davis_jobeth"
+
+    def test_recognition_does_not_capture_trailing_clause(self, resolver):
+        """Recognition pattern stops at trailing clauses like 'to speak on'."""
+        transcript = {
+            "session_id": "test_trailing",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Member for Golden Isles to speak on this matter.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to address the important legislation before us today.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_pickstock_darron"
+
     def test_recognition_chaining_confidence(self, resolver, sample_transcript_with_recognition):
         """Recognition chaining has appropriate confidence."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_recognition)
-        
+
         for speaker_label, resolution in resolutions.items():
             if resolution.method == "recognition_chaining":
                 # Should have good confidence (0.75 in implementation)

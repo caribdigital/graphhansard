@@ -96,11 +96,11 @@ def main():
     for speaker_label, resolution in sorted(resolutions.items()):
         mp_name = mp_registry.get(resolution.resolved_node_id, {}).get("common_name", "Unknown")
         print(f"{speaker_label}:")
-        print(f"  → Resolved to: {resolution.resolved_node_id} ({mp_name})")
-        print(f"  → Confidence: {resolution.confidence:.2f}")
-        print(f"  → Method: {resolution.method}")
+        print(f"  -> Resolved to: {resolution.resolved_node_id} ({mp_name})")
+        print(f"  -> Confidence: {resolution.confidence:.2f}")
+        print(f"  -> Method: {resolution.method}")
         if resolution.evidence:
-            print(f"  → Evidence:")
+            print(f"  -> Evidence:")
             for evidence in resolution.evidence[:3]:  # Show first 3 pieces of evidence
                 print(f"      - {evidence}")
         print()
@@ -159,7 +159,7 @@ def main():
     
     print("=" * 80)
     print()
-    print("✅ Speaker resolution complete!")
+    print("[OK] Speaker resolution complete!")
     print()
     print("NEXT STEPS:")
     print("  - These resolved speaker_node_ids will be used by entity_extractor.py")
