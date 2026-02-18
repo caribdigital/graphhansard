@@ -37,11 +37,25 @@ pip install -e ".[brain]"
 
 ### GPU Setup (Recommended)
 
+**For production GPU deployments (e.g., Azure VMs)**, use the pinned requirements file to avoid dependency conflicts:
+
+```bash
+# Install with CUDA support first
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install pinned GPU dependencies (prevents pyannote 4.x breakage)
+pip install -r requirements-gpu.txt
+```
+
+**For development**, you can use the brain extras (but be aware of potential dependency upgrades):
+
 ```bash
 # Install with CUDA support
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -e ".[brain]"
 ```
+
+> **Note**: The `requirements-gpu.txt` file pins `pyannote.audio==3.4.0` and `torch<2.7` to avoid known issues with pyannote 4.x (torchcodec ABI breakage) and PyTorch 2.6+ (`weights_only=True` default). See the file for detailed rationale and monkey-patch requirements.
 
 ### HuggingFace Token Setup
 

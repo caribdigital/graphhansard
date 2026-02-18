@@ -183,6 +183,8 @@ class Diarizer:
         )
 
         # Perform diarization with WhisperX
+        # Note: In newer whisperx versions, DiarizationPipeline moved to whisperx.diarize
+        # The pinned git version in requirements-gpu.txt maintains compatibility
         diarize_model = whisperx.DiarizationPipeline(
             use_auth_token=self.hf_token, device=self.device
         )
