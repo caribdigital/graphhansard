@@ -6,9 +6,17 @@ network centrality metrics. See SRD §8.5 (BR-21 through BR-28).
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 
 from pydantic import BaseModel, Field
+
+# GR-7: Pre-compiled pattern for Chair/Speaker recognition context detection.
+# Used as fallback when source is an unresolved SPEAKER_XX diarization label.
+_RECOGNITION_PATTERN = re.compile(
+    r"(?:The\s+)?(?:Chair|Speaker)\s+recogni[sz]es?\s+",
+    re.IGNORECASE,
+)
 
 
 class StructuralRole(str, Enum):
@@ -238,6 +246,9 @@ class GraphBuilder:
                 else:
                     edge_aggregations[key]["neutral_count"] += 1
 
+        # Extract control node IDs from mp_registry (GR-7)
+        control_node_ids = self._extract_control_nodes(mp_registry)
+
         # Build NetworkX directed graph
         G = nx.DiGraph()
 
@@ -261,6 +272,11 @@ class GraphBuilder:
             # Calculate net sentiment (BR-23)
             net_sentiment = self._calculate_net_sentiment(pos, neg, total)
 
+            # Determine if edge is procedural (GR-7)
+            is_procedural, semantic_type = self._classify_edge(
+                source, target, agg["contexts"], control_node_ids
+            )
+
             edge_record = EdgeRecord(
                 source_node_id=source,
                 target_node_id=target,
@@ -270,6 +286,8 @@ class GraphBuilder:
                 negative_count=neg,
                 net_sentiment=net_sentiment,
                 mention_details=agg["mention_details"],
+                is_procedural=is_procedural,
+                semantic_type=semantic_type,
             )
             edges.append(edge_record)
 
@@ -413,6 +431,74 @@ class GraphBuilder:
             return 0.0
         return (positive_count - negative_count) / total_count
 
+    def _extract_control_nodes(
+        self, mp_registry: dict[str, tuple[str, str] | dict] | None
+    ) -> set[str]:
+        """Extract control node IDs from mp_registry (GR-7).
+
+        Identifies nodes that serve a procedural control role (Speaker,
+        Deputy Speaker) via either ``node_type == "control"`` or a
+        Speaker-related entry in ``special_roles``.
+
+        Args:
+            mp_registry: Optional dict mapping node_id to MP data
+
+        Returns:
+            Set of node_ids identified as control nodes
+        """
+        control_nodes = set()
+        if mp_registry:
+            for node_id, reg_data in mp_registry.items():
+                # Support both tuple format and dict format
+                if isinstance(reg_data, dict):
+                    node_type = reg_data.get("node_type", "debater")
+                    if node_type == "control":
+                        control_nodes.add(node_id)
+                        continue
+                    # Also detect Deputy Speaker via special_roles
+                    special_roles = reg_data.get("special_roles", [])
+                    if any("speaker" in r.lower() for r in special_roles):
+                        control_nodes.add(node_id)
+        return control_nodes
+
+    def _classify_edge(
+        self,
+        source: str,
+        target: str,
+        contexts: list[str],
+        control_node_ids: set[str],
+    ) -> tuple[bool, EdgeSemanticType]:
+        """Classify edge as procedural or political (GR-7).
+
+        Args:
+            source: Source node ID
+            target: Target node ID
+            contexts: List of context windows for this edge
+            control_node_ids: Set of control node IDs (Speaker, Deputy Speaker)
+
+        Returns:
+            Tuple of (is_procedural, semantic_type)
+        """
+        # Check if source or target is a control node
+        if source in control_node_ids or target in control_node_ids:
+            # Chair/Speaker recognizing an MP to speak
+            if source in control_node_ids:
+                return True, EdgeSemanticType.RECOGNIZING
+            # MP addressing the Chair (rare but possible)
+            else:
+                return True, EdgeSemanticType.MENTION
+
+        # Context-based fallback for unresolved SPEAKER_XX nodes.
+        # Require ALL contexts to match the recognition pattern so that a
+        # single procedural mention doesn't mis-tag a predominantly
+        # political edge as procedural.
+        if source.startswith("SPEAKER_") and contexts:
+            if all(_RECOGNITION_PATTERN.search(c) for c in contexts):
+                return True, EdgeSemanticType.RECOGNIZING
+
+        # Default: political interaction
+        return False, EdgeSemanticType.MENTION
+
     def _assign_structural_roles(
         self, node_metrics: list[NodeMetrics]
     ) -> list[NodeMetrics]:
@@ -503,6 +589,8 @@ class GraphBuilder:
                         "neutral_count": 0,
                         "negative_count": 0,
                         "mention_details": [],
+                        "is_procedural": edge.is_procedural,
+                        "semantic_type": edge.semantic_type,
                     }
 
                 edge_aggregations[key]["total_mentions"] += edge.total_mentions
@@ -510,6 +598,14 @@ class GraphBuilder:
                 edge_aggregations[key]["neutral_count"] += edge.neutral_count
                 edge_aggregations[key]["negative_count"] += edge.negative_count
                 edge_aggregations[key]["mention_details"].extend(edge.mention_details)
+
+                # GR-7: Promote to procedural if ANY session marks it so.
+                # Procedural is the more specific classification — it is
+                # safer to exclude a procedural edge from political analysis
+                # than to silently include it.
+                if edge.is_procedural and not edge_aggregations[key]["is_procedural"]:
+                    edge_aggregations[key]["is_procedural"] = True
+                    edge_aggregations[key]["semantic_type"] = edge.semantic_type
 
         # Build NetworkX graph
         G = nx.DiGraph()
@@ -542,6 +638,8 @@ class GraphBuilder:
                 negative_count=neg,
                 net_sentiment=net_sentiment,
                 mention_details=agg["mention_details"],
+                is_procedural=agg["is_procedural"],
+                semantic_type=agg["semantic_type"],
             )
             edges.append(edge_record)
 
