@@ -103,6 +103,20 @@ class SentimentScorer:
         ],
     }
 
+    # Procedural patterns (Issue #54 - GR-7)
+    # These are neutral procedural statements that should not be scored as positive
+    PROCEDURAL_PATTERNS = [
+        "the chair recognizes",
+        "the speaker recognizes",
+        "the deputy speaker recognizes",
+        "i recognize the member",
+        "i recognize the honourable member",
+        "could you recognize the",
+        "madam speaker recognizes",
+        "mr speaker recognizes",
+        "mr. speaker recognizes",
+    ]
+
     def __init__(self, model_name: str = "facebook/bart-large-mnli"):
         """Initialize the sentiment scorer.
 
@@ -144,6 +158,16 @@ class SentimentScorer:
         Returns:
             SentimentResult with label, confidence, and parliamentary markers.
         """
+        # Check for procedural patterns first (Issue #54)
+        # Chair/Speaker recognition should be neutral, not positive
+        if self._is_procedural(context_window):
+            markers = self._detect_markers(context_window)
+            return SentimentResult(
+                label=SentimentLabel.NEUTRAL,
+                confidence=1.0,  # High confidence for pattern-based classification
+                parliamentary_markers=markers,
+            )
+
         self._load_model()
 
         # Run zero-shot classification
@@ -183,6 +207,26 @@ class SentimentScorer:
             List of SentimentResult objects in the same order.
         """
         return [self.score(context) for context in contexts]
+
+    def _is_procedural(self, text: str) -> bool:
+        """Check if text contains procedural Chair/Speaker recognition patterns.
+
+        These are neutral procedural statements that should not be scored as positive
+        sentiment. See Issue #54 for context.
+
+        Args:
+            text: The context window text.
+
+        Returns:
+            True if text matches procedural patterns, False otherwise.
+        """
+        text_lower = text.lower()
+        
+        for pattern in self.PROCEDURAL_PATTERNS:
+            if pattern in text_lower:
+                return True
+        
+        return False
 
     def _detect_markers(self, text: str) -> list[str]:
         """Detect parliamentary-specific markers in text.
