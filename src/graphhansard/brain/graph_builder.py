@@ -6,6 +6,7 @@ network centrality metrics. See SRD §8.5 (BR-21 through BR-28).
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -462,8 +463,6 @@ class GraphBuilder:
         Returns:
             Tuple of (is_procedural, semantic_type)
         """
-        import re
-
         # Check if source or target is a control node
         if source in control_node_ids or target in control_node_ids:
             # Chair/Speaker recognizing an MP to speak
