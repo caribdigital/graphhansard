@@ -353,6 +353,8 @@ def process_command(args):
         hf_token=args.hf_token,
         use_whisperx=args.use_whisperx,
         backend=args.backend,
+        enable_speaker_resolution=args.enable_speaker_resolution,
+        golden_record_path=args.golden_record,
     )
 
     transcript = pipeline.process(
@@ -366,6 +368,14 @@ def process_command(args):
     pipeline.save_transcript(transcript, str(transcript_path))
     print(f"[OK] Transcript saved: {transcript_path}")
     print(f"  Segments: {len(transcript.segments)}")
+    
+    # Print speaker resolution summary if enabled
+    if args.enable_speaker_resolution:
+        resolved = sum(1 for seg in transcript.segments if seg.speaker_node_id is not None)
+        total_speakers = len(set(seg.speaker_label for seg in transcript.segments))
+        print(f"  Speaker Resolution: {resolved}/{len(transcript.segments)} segments resolved")
+        print(f"  Unique Speakers: {total_speakers}")
+
 
     # Stage 2: Entity Extraction
     print("\n" + "=" * 70)
@@ -676,6 +686,11 @@ def main():
     )
     process_parser.add_argument(
         "--use-spacy", action="store_true", help="Enable spaCy NER for entity extraction"
+    )
+    process_parser.add_argument(
+        "--enable-speaker-resolution",
+        action="store_true",
+        help="Enable speaker identity resolution (SPEAKER_XX -> MP node IDs)",
     )
     process_parser.add_argument(
         "--sentiment-model",

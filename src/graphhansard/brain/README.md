@@ -331,6 +331,81 @@ When improving this module:
 4. Document performance impact
 5. Handle edge cases (silence, overlaps, artifacts)
 
+## Speaker Identity Resolution
+
+### Overview
+
+The speaker resolution module bridges the gap between diarization labels (SPEAKER_XX) and actual MP identities by using heuristic-based pattern matching. This enables "who said what" analysis in the graph.
+
+### Heuristics Implemented
+
+1. **Chair Detection** (Confidence: 0.6-0.9)
+   - Identifies Speaker/Deputy Speaker by procedural language
+   - Patterns: "The Chair recognizes", "Order, order", "The House will come to order"
+   - Typically resolves 1-2 speakers per session
+
+2. **Recognition Chaining** (Confidence: 0.75)
+   - Links recognized MPs to their subsequent speech
+   - Patterns: "I recognize the Member for [constituency]", "The Honourable [Name] has the floor"
+   - Resolves 3-5 additional speakers per session
+
+3. **Portfolio Fingerprinting** (Confidence: 0.3-0.6)
+   - Matches discussion topics to MP portfolios
+   - Keywords: finance, tourism, health, education, etc.
+   - Lower confidence, used as supplementary signal
+
+4. **Self-Reference Detection** (Placeholder)
+   - Future enhancement to integrate with entity extraction
+   - Will detect when speaker mentions themselves
+
+### Usage
+
+Enable speaker resolution in the pipeline:
+
+```python
+from graphhansard.brain import create_pipeline
+
+pipeline = create_pipeline(
+    model_size="large-v3",
+    enable_speaker_resolution=True,
+    golden_record_path="golden_record/mps.json"
+)
+
+transcript = pipeline.process(
+    audio_path="session.wav",
+    session_id="2024-01-15"
+)
+
+# Segments now have speaker_node_id populated
+for segment in transcript.segments:
+    print(f"{segment.speaker_label} -> {segment.speaker_node_id}")
+```
+
+Or via CLI:
+
+```bash
+python -m graphhansard.brain process audio.wav \
+  --session-id "2024-01-15" \
+  --golden-record golden_record/mps.json \
+  --enable-speaker-resolution
+```
+
+### Resolution Quality
+
+- **Expected Resolution Rate**: 40-60% of speakers per session
+- **Precision Target**: ≥95% (no false mappings)
+- **Recall Target**: ≥40% (resolve at least Chair + 3 MPs)
+
+Unresolved speakers remain as SPEAKER_XX to avoid false mappings.
+
+### Demo Script
+
+Run the demonstration to see speaker resolution in action:
+
+```bash
+python scripts/demo_speaker_resolution.py
+```
+
 ## References
 
 - SRD §8.2: Stage 1 — Transcription & Diarization
