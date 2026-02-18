@@ -4,6 +4,8 @@ Tests the heuristic-based speaker identity resolution that maps
 SPEAKER_XX labels to MP node IDs.
 """
 
+from pathlib import Path
+
 import pytest
 
 from graphhansard.brain.speaker_resolver import (
@@ -11,7 +13,6 @@ from graphhansard.brain.speaker_resolver import (
     SpeakerResolver,
     load_mp_registry_from_golden_record,
 )
-from pathlib import Path
 
 GOLDEN_RECORD_PATH = Path(__file__).parent.parent / "golden_record" / "mps.json"
 
@@ -145,7 +146,7 @@ class TestSpeakerResolverInit:
         # Should find the Speaker
         assert resolver.speaker_node_id is not None
         assert resolver.speaker_node_id == "mp_deveaux_patricia"
-        
+
         # Should find the Deputy Speaker
         assert resolver.deputy_speaker_node_id is not None
         assert resolver.deputy_speaker_node_id == "mp_bonaby_mckell"
@@ -157,7 +158,7 @@ class TestChairDetection:
     def test_detect_speaker_by_chair_language(self, resolver, sample_transcript_with_chair):
         """Detects Speaker by chair procedural language."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_chair)
-        
+
         # SPEAKER_00 should be identified as the Speaker
         assert "SPEAKER_00" in resolutions
         resolution = resolutions["SPEAKER_00"]
@@ -168,7 +169,7 @@ class TestChairDetection:
     def test_chair_detection_confidence(self, resolver, sample_transcript_with_chair):
         """Chair detection has appropriate confidence."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_chair)
-        
+
         if "SPEAKER_00" in resolutions:
             resolution = resolutions["SPEAKER_00"]
             # Confidence should be high for multiple chair patterns
@@ -177,7 +178,7 @@ class TestChairDetection:
     def test_chair_detection_evidence(self, resolver, sample_transcript_with_chair):
         """Chair detection includes evidence."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_chair)
-        
+
         if "SPEAKER_00" in resolutions:
             resolution = resolutions["SPEAKER_00"]
             assert len(resolution.evidence) > 0
@@ -290,6 +291,117 @@ class TestRecognitionChaining:
                 # Should have good confidence (0.75 in implementation)
                 assert resolution.confidence >= 0.7
 
+    def test_recognize_deputy_prime_minister(self, resolver):
+        """Recognizes Deputy Prime Minister by title."""
+        transcript = {
+            "session_id": "test_title_dpm",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Deputy Prime Minister.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to discuss tourism development and our aviation sector which are critical to our economy.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be Chester Cooper (Deputy Prime Minister)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_cooper_chester"
+        assert resolution.method == "recognition_chaining"
+        assert "Deputy Prime Minister" in resolution.evidence[0]
+
+    def test_recognize_minister_of_foreign_affairs(self, resolver):
+        """Recognizes Minister of Foreign Affairs by title."""
+        transcript = {
+            "session_id": "test_title_foreign",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Minister of Foreign Affairs.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I wish to address our international relations and diplomatic efforts in the region.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be Fred Mitchell (Minister of Foreign Affairs)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_mitchell_fred"
+        assert resolution.method == "recognition_chaining"
+        assert "Minister of Foreign Affairs" in resolution.evidence[0]
+
+    def test_recognize_prime_minister(self, resolver):
+        """Recognizes Prime Minister by title."""
+        transcript = {
+            "session_id": "test_title_pm",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Prime Minister.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to address the budget and fiscal policy that will guide our nation forward.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be Brave Davis (Prime Minister)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_davis_brave"
+        assert resolution.method == "recognition_chaining"
+        assert "Prime Minister" in resolution.evidence[0]
+
+    def test_recognize_leader_of_opposition(self, resolver):
+        """Recognizes Leader of the Opposition by title."""
+        transcript = {
+            "session_id": "test_title_opposition",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Leader of the Opposition.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to express our concerns about the proposed legislation and its impact on our constituents.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be Michael Pintard (Leader of the Opposition)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_pintard_michael"
+        assert resolution.method == "recognition_chaining"
+
 
 class TestPortfolioFingerprinting:
     """Test portfolio/topic fingerprinting heuristic."""
@@ -297,13 +409,13 @@ class TestPortfolioFingerprinting:
     def test_portfolio_matching_basic(self, resolver, sample_transcript_with_portfolio):
         """Matches speakers to portfolios by keywords."""
         resolutions = resolver.resolve_speakers(sample_transcript_with_portfolio)
-        
+
         # Lower confidence threshold for portfolio matching
         portfolio_resolutions = {
             k: v for k, v in resolutions.items()
             if v.method == "portfolio_fingerprinting"
         }
-        
+
         # Should find at least some portfolio matches
         # (depends on golden record data and keyword matching)
         # This is a basic check - portfolio matching is a weak signal
@@ -320,10 +432,10 @@ class TestResolutionConfidence:
         """Resolutions below confidence threshold are filtered out."""
         # Use high threshold
         resolutions = resolver.resolve_speakers(
-            sample_transcript_with_chair, 
+            sample_transcript_with_chair,
             confidence_threshold=0.95
         )
-        
+
         # Should filter out lower confidence resolutions
         for resolution in resolutions.values():
             assert resolution.confidence >= 0.95
@@ -334,7 +446,7 @@ class TestResolutionConfidence:
             sample_transcript_with_chair,
             confidence_threshold=0.0
         )
-        
+
         # Should return more resolutions with low threshold
         assert len(resolutions) >= 0
 
@@ -346,13 +458,13 @@ class TestApplyResolutions:
         """Applying resolutions updates segment speaker_node_id."""
         # Get resolutions
         resolutions = resolver.resolve_speakers(sample_transcript_with_chair)
-        
+
         # Apply to transcript
         updated_transcript = resolver.apply_resolutions(
             sample_transcript_with_chair,
             resolutions
         )
-        
+
         # Check segments are updated
         for segment in updated_transcript["segments"]:
             speaker_label = segment["speaker_label"]
@@ -372,10 +484,10 @@ class TestApplyResolutions:
                 }
             ]
         }
-        
+
         resolutions = resolver.resolve_speakers(transcript)
         updated_transcript = resolver.apply_resolutions(transcript, resolutions)
-        
+
         # SPEAKER_99 should remain unresolved
         segment = updated_transcript["segments"][0]
         if "SPEAKER_99" not in resolutions:
@@ -433,10 +545,10 @@ class TestLoadMPRegistry:
     def test_load_mp_registry(self):
         """Loads MP registry successfully."""
         registry = load_mp_registry_from_golden_record(GOLDEN_RECORD_PATH)
-        
+
         assert isinstance(registry, dict)
         assert len(registry) > 0
-        
+
         # Check structure
         for node_id, mp_data in registry.items():
             assert "common_name" in mp_data
@@ -447,7 +559,7 @@ class TestLoadMPRegistry:
     def test_speaker_in_registry(self):
         """Speaker is in the loaded registry."""
         registry = load_mp_registry_from_golden_record(GOLDEN_RECORD_PATH)
-        
+
         # Find the Speaker
         speaker_found = False
         for node_id, mp_data in registry.items():
@@ -455,7 +567,7 @@ class TestLoadMPRegistry:
                 speaker_found = True
                 assert node_id == "mp_deveaux_patricia"
                 break
-        
+
         assert speaker_found, "Speaker should be in registry"
 
 
@@ -471,7 +583,7 @@ class TestSpeakerResolutionModel:
             method="chair_detection",
             evidence=["Pattern match: 'The Chair recognizes'"]
         )
-        
+
         assert resolution.speaker_label == "SPEAKER_00"
         assert resolution.resolved_node_id == "mp_davis_brave"
         assert resolution.confidence == 0.85
