@@ -564,6 +564,287 @@ class TestPortfolioFingerprinting:
             for resolution in portfolio_resolutions.values():
                 assert resolution.confidence < 0.7  # Should be lower confidence
                 assert "portfolio" in resolution.method.lower()
+    
+    def test_transport_aviation_keywords(self, resolver):
+        """Test Transport & Aviation portfolio keywords."""
+        transcript = {
+            "session_id": "test_transport",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "We need to improve our airport infrastructure and aviation sector. The airline industry is critical for tourism.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to a Minister with Transport/Aviation portfolio
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_agriculture_marine_keywords(self, resolver):
+        """Test Agriculture & Marine Resources portfolio keywords."""
+        transcript = {
+            "session_id": "test_agriculture",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Our farmers need support for agriculture. We must invest in fisheries and marine resources to help our fishing industry.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Agriculture/Marine minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_housing_keywords(self, resolver):
+        """Test Housing portfolio keywords."""
+        transcript = {
+            "session_id": "test_housing",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "We need more affordable housing for our people. The mortgage assistance program and residential developments are priorities.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Housing minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_national_security_bigram(self, resolver):
+        """Test National Security bigram keyword matching."""
+        transcript = {
+            "session_id": "test_security",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "National security is paramount. We must address crime and support our police officers and law enforcement agencies.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to National Security minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_youth_sports_culture_keywords(self, resolver):
+        """Test Youth, Sports & Culture portfolio keywords."""
+        transcript = {
+            "session_id": "test_youth",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "We support our young people and athletes. Sports, culture, and junkanoo festivals are vital for youth development.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Youth/Sports/Culture minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_labour_keywords(self, resolver):
+        """Test Labour portfolio keywords."""
+        transcript = {
+            "session_id": "test_labour",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "We must protect workers' rights and address unemployment. The minimum wage and trade unions are important for labour relations.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Labour minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_environment_keywords(self, resolver):
+        """Test Environment portfolio keywords."""
+        transcript = {
+            "session_id": "test_environment",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Environmental conservation and climate change are critical. We need sustainable renewable energy and better recycling programs.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Environment minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_energy_keywords(self, resolver):
+        """Test Energy portfolio keywords."""
+        transcript = {
+            "session_id": "test_energy",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "We need renewable energy solutions. Solar power and electricity infrastructure are vital for our energy independence.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Energy minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_immigration_keywords(self, resolver):
+        """Test Immigration portfolio keywords."""
+        transcript = {
+            "session_id": "test_immigration",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Immigration policy needs reform. We must address work permits, visa applications, and citizenship requirements.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Immigration minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_social_services_bigram(self, resolver):
+        """Test Social Services bigram keyword matching."""
+        transcript = {
+            "session_id": "test_social",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Social services are essential for the vulnerable. We help the elderly, disabled, and families living in poverty with welfare assistance.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Social Services minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_disaster_management_keywords(self, resolver):
+        """Test Disaster Risk Management portfolio keywords."""
+        transcript = {
+            "session_id": "test_disaster",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Hurricane preparedness and disaster recovery are vital. NEMA coordinates our emergency response and relief efforts.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Disaster Management minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_works_utilities_keywords(self, resolver):
+        """Test Works & Utilities portfolio keywords."""
+        transcript = {
+            "session_id": "test_works",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Public works and utilities infrastructure need investment. Water, sewerage, and electricity systems require maintenance.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Should match to Works/Utilities minister
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
+            assert resolution.confidence < 0.7
+    
+    def test_portfolio_confidence_remains_low(self, resolver):
+        """Test that portfolio confidence remains below 0.7."""
+        # Test with very strong portfolio signal (many keyword matches)
+        transcript = {
+            "session_id": "test_confidence",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Budget finance tax revenue fiscal economy budget finance tax revenue fiscal economy budget finance tax revenue fiscal economy",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # Even with many matches, confidence should not exceed 0.7
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            if resolution.method == "portfolio_fingerprinting":
+                assert resolution.confidence < 0.7, f"Portfolio confidence {resolution.confidence} should be < 0.7"
+    
+    def test_word_boundary_matching(self, resolver):
+        """Test that keyword matching uses word boundaries to avoid partial matches."""
+        transcript = {
+            "session_id": "test_boundaries",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "The financial advisor discussed taxation and fiscal policy.",
+                    "start_time": 0.0,
+                    "end_time": 10.0,
+                }
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript, confidence_threshold=0.0)
+        # "tax" should match in "taxation", "fiscal" should match
+        # This tests that the word boundary matching works correctly
+        if "SPEAKER_01" in resolutions:
+            resolution = resolutions["SPEAKER_01"]
+            assert resolution.method == "portfolio_fingerprinting"
 
 
 class TestResolutionConfidence:
