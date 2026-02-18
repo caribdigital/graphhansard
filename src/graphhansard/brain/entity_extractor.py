@@ -40,10 +40,10 @@ class MentionRecord(BaseModel):
     context_window: str = Field(description="Surrounding text for verification")
     segment_index: int
     is_self_reference: bool = Field(
-        default=False, 
+        default=False,
         description="True if speaker refers to themselves (BR-15)"
     )
-    
+
     def to_graph_dict(self, sentiment_label: str | None = None) -> dict:
         """Convert to dict format for GraphBuilder.
         
@@ -112,7 +112,25 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
     }
-    
+
+    # Foreign leader pattern - detects nationality qualifiers before titles
+    # This prevents foreign leaders from being resolved to Bahamian MPs.
+    # "Bahamian" is explicitly excluded via negative lookahead so that
+    # "the Bahamian Prime Minister" still resolves to mp_davis_brave.
+    # The generic suffix pattern [A-Z][a-z]+(?:ian|ese|ish|an) may match
+    # some non-nationality words (e.g., 'Christian'), but the full pattern
+    # requires a governmental title to follow, limiting false positives.
+    FOREIGN_LEADER_PATTERN = re.compile(
+        r"(?:the\s+)?\b(?!Bahamian\b)(?:Canadian|British|American|French|Cuban|Haitian|Jamaican|"
+        r"Trinidadian|Barbadian|Dominican|Mexican|European|Russian|Chinese|"
+        r"Indian|German|Italian|Spanish|Australian|New\s+Zealand|Norwegian|Swedish|"
+        r"Danish|Finnish|Dutch|Belgian|Swiss|Austrian|Polish|Greek|Turkish|"
+        r"[A-Z][a-z]+(?:ian|ese|ish|an))\s+"
+        r"(?:Prime\s+Minister|President|Chancellor|Premier|King|Queen|"
+        r"Minister|Leader|Foreign\s+Minister|Defence\s+Minister)",
+        re.IGNORECASE,
+    )
+
     # Deictic/Anaphoric reference patterns (BR-11)
     DEICTIC_PATTERNS = {
         "member_who_spoke": re.compile(
@@ -140,7 +158,7 @@ class EntityExtractor:
             re.IGNORECASE,
         ),
     }
-    
+
     # Stop words that typically follow mentions (not part of the title)
     STOP_WORDS = [
         'said', 'spoke', 'mentioned', 'stated', 'asked', 'replied',
@@ -164,7 +182,7 @@ class EntityExtractor:
         self.unresolved_mentions = []  # Track unresolved mentions
         self.context_window_size = context_window_size  # For anaphoric resolution
         self.coreference_confidence = coreference_confidence  # Base confidence for coreference
-        
+
         # Build MP lookup for party/context information
         self._mp_lookup = {
             mp.node_id: mp for mp in self.resolver.golden_record.mps
@@ -332,16 +350,16 @@ class EntityExtractor:
         for raw_mention, char_start, char_end in all_raw_mentions:
             # Check if this is a deictic/anaphoric reference (BR-11)
             is_deictic = self._is_deictic_reference(raw_mention)
-            
+
             # Build speaker history for coreference resolution
             speaker_history = self._build_speaker_history(segment_index, all_segments)
-            
+
             # Initialize resolution
             resolution = None
             target_node_id = None
             res_method = ResolutionMethod.UNRESOLVED
             confidence = 0.0
-            
+
             if is_deictic:
                 # Attempt coreference resolution (BR-11)
                 target_node_id = self._resolve_coreference(
@@ -359,7 +377,7 @@ class EntityExtractor:
                 resolution = self.resolver.resolve(raw_mention, debate_date)
                 target_node_id = resolution.node_id
                 confidence = resolution.confidence
-                
+
                 # Determine resolution method based on resolver output
                 if resolution.method == "exact":
                     res_method = ResolutionMethod.EXACT
@@ -367,7 +385,7 @@ class EntityExtractor:
                     res_method = ResolutionMethod.FUZZY
                 else:
                     res_method = ResolutionMethod.UNRESOLVED
-            
+
             # Check for self-reference (BR-15)
             is_self_reference = (target_node_id == source_node_id) if target_node_id else False
 
@@ -412,11 +430,19 @@ class EntityExtractor:
 
         Deictic patterns (BR-11) are processed first and take priority
         over standard patterns to prevent greedy capture pollution.
+        
+        Foreign leader references (e.g., "the Canadian prime minister") are 
+        detected and excluded to prevent false-positive resolutions to Bahamian MPs.
 
         Returns:
             List of (mention_text, char_start, char_end) tuples
         """
         mentions = []
+
+        # Phase 0: Identify foreign leader ranges to exclude
+        foreign_leader_ranges = []
+        for match in self.FOREIGN_LEADER_PATTERN.finditer(text):
+            foreign_leader_ranges.append((match.start(), match.end()))
 
         # Phase 1: Extract deictic/anaphoric patterns first (BR-11) — they take priority
         deictic_ranges = []
@@ -430,7 +456,7 @@ class EntityExtractor:
                     mentions.append((mention_text, char_start, char_end))
                     deictic_ranges.append((char_start, char_end))
 
-        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps
+        # Phase 2: Extract standard parliamentary patterns, skipping deictic overlaps and foreign leaders
         for pattern_name, pattern in self.PATTERNS.items():
             if pattern_name == "point_of_order":
                 continue  # Handled by detect_point_of_order(), not as MP mention
@@ -456,6 +482,14 @@ class EntityExtractor:
                     for d_start, d_end in deictic_ranges
                 )
                 if overlaps_deictic:
+                    continue
+
+                # Skip if overlaps with a foreign leader reference
+                overlaps_foreign = any(
+                    not (char_end <= f_start or char_start >= f_end)
+                    for f_start, f_end in foreign_leader_ranges
+                )
+                if overlaps_foreign:
                     continue
 
                 # Only add if mention is substantial (at least 5 chars)
@@ -620,22 +654,22 @@ class EntityExtractor:
         """
         history = []
         start_idx = max(0, current_segment_index - self.context_window_size)
-        
+
         for idx in range(start_idx, current_segment_index):
             segment = all_segments[idx]
             speaker_id = segment.get("speaker_node_id") or segment.get("speaker_label")
-            
+
             if speaker_id and speaker_id != "UNKNOWN":
                 history.append({
                     "node_id": speaker_id,
                     "segment_index": idx,
                     "text": segment.get("text", ""),
                 })
-        
+
         return history
 
     def _resolve_coreference(
-        self, mention: str, source_node_id: str, speaker_history: list[dict], 
+        self, mention: str, source_node_id: str, speaker_history: list[dict],
         debate_date: str | None
     ) -> str | None:
         """Resolve deictic/anaphoric references using speaker turn context (BR-11).
@@ -656,13 +690,13 @@ class EntityExtractor:
         """
         if not speaker_history:
             return None
-        
+
         mention_lower = mention.lower()
-        
+
         # Get source MP info for party-based filtering
         source_mp = self._mp_lookup.get(source_node_id)
         source_party = source_mp.party if source_mp else None
-        
+
         # Determine filtering criteria based on mention type
         # Handle "opposite" as the primary indicator since it overrides "friend"
         same_party_filter = None
@@ -673,16 +707,16 @@ class EntityExtractor:
         elif "my" in mention_lower and "friend" in mention_lower:
             # "my honourable friend" (without "opposite") refers to same party
             same_party_filter = True
-        
+
         # Filter candidates based on party affiliation if applicable
         candidates = []
         for speaker in speaker_history:
             speaker_node_id = speaker["node_id"]
-            
+
             # Skip if it's the source speaker (self-reference check)
             if speaker_node_id == source_node_id:
                 continue
-            
+
             # Apply party filter if applicable
             if same_party_filter is not None and source_party:
                 speaker_mp = self._mp_lookup.get(speaker_node_id)
@@ -692,19 +726,19 @@ class EntityExtractor:
                         continue
                     elif not same_party_filter and speaker_party == source_party:
                         continue
-            
+
             candidates.append(speaker)
-        
+
         if not candidates:
             return None
-        
+
         # Score candidates by recency (most recent speaker gets highest score)
         # For "who just spoke" or "previous speaker", strongly prefer most recent
         if "just spoke" in mention_lower or "who spoke" in mention_lower or "previous speaker" in mention_lower:
             # Return the most recent speaker (highest segment index)
             most_recent = max(candidates, key=lambda x: x["segment_index"])
             return most_recent["node_id"]
-        
+
         # For other deictic references, return most recent candidate
         # Return the most recent candidate
         candidates.sort(key=lambda x: x["segment_index"], reverse=True)
@@ -745,7 +779,7 @@ class EntityExtractor:
             speaker_id: Node ID of the speaker making the mention
         """
         from datetime import datetime, timezone
-        
+
         self.unresolved_mentions.append({
             "mention": mention,
             "session_id": session_id,
@@ -764,12 +798,12 @@ class EntityExtractor:
             output_path: Path to save the log file
         """
         import json
-        
+
         output = {
             "total_unresolved": len(self.unresolved_mentions),
             "mentions": self.unresolved_mentions,
         }
-        
+
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(output, f, indent=2, ensure_ascii=False)
 
