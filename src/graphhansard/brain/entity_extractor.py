@@ -248,6 +248,10 @@ class EntityExtractor:
         all_mentions = []
 
         for idx, segment in enumerate(segments):
+            # Skip segments flagged for exclusion (BC-9, BC-10)
+            if segment.get("exclude_from_extraction", False):
+                continue
+            
             # Extract mentions from this segment
             segment_mentions = self._extract_from_segment(
                 segment, idx, session_id, segments, debate_date
