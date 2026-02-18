@@ -235,6 +235,24 @@ class TestForeignLeaderDetection:
         mention_texts = [m[0].lower() for m in mentions]
         assert not any("prime minister" in m for m in mention_texts)
 
+    def test_bahamian_prime_minister_not_filtered(self, extractor):
+        """'Bahamian Prime Minister' should NOT be filtered — it's the local PM."""
+        text = "The Bahamian Prime Minister met with the Canadian Prime Minister."
+        mentions = extractor._extract_pattern_mentions(text)
+
+        # Should detect the Bahamian PM but NOT the Canadian PM
+        mention_texts = [m[0] for m in mentions]
+        assert len(mentions) >= 1
+        assert any("Prime Minister" in m for m in mention_texts)
+
+    def test_bahamian_minister_not_filtered(self, extractor):
+        """'Bahamian Minister of Finance' should NOT be filtered."""
+        text = "The Bahamian Minister of Finance presented the budget."
+        mentions = extractor._extract_pattern_mentions(text)
+
+        mention_texts = [m[0] for m in mentions]
+        assert any("Minister" in m for m in mention_texts)
+
 
 class TestMentionDeduplication:
     """Test mention deduplication logic."""
