@@ -806,8 +806,9 @@ class TestPortfolioFingerprinting:
             assert resolution.confidence < 0.7
     
     def test_portfolio_confidence_remains_low(self, resolver):
-        """Test that portfolio confidence remains below 0.7."""
+        """Test that portfolio confidence remains below 0.7 even with many keyword matches."""
         # Test with very strong portfolio signal (many keyword matches)
+        # This ensures the confidence cap is enforced
         transcript = {
             "session_id": "test_confidence",
             "segments": [

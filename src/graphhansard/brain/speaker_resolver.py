@@ -476,9 +476,9 @@ class SpeakerResolver:
                 # Works & Utilities (new)
                 if "works" in title or "utilities" in title:
                     portfolio_keywords[node_id].extend([
-                        "works", "utilities", "infrastructure", "water",
+                        "public works", "utilities", "infrastructure", "water",
                         "sewerage", "electricity", "power", "construction",
-                        "public works", "maintenance"
+                        "maintenance"
                     ])
 
                 # Housing (new)
@@ -493,7 +493,7 @@ class SpeakerResolver:
                 if "immigration" in title:
                     portfolio_keywords[node_id].extend([
                         "immigration", "immigrants", "visa", "visas",
-                        "work permit", "work permits", "citizenship",
+                        "work permits", "citizenship",
                         "deportation", "border", "migration"
                     ])
 
@@ -584,7 +584,6 @@ class SpeakerResolver:
                     else:
                         # Single word - use word boundary matching
                         # Count occurrences as whole words only
-                        import re
                         pattern = r'\b' + re.escape(keyword) + r'\b'
                         count = len(re.findall(pattern, text))
                     
