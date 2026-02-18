@@ -80,8 +80,8 @@ def main():
     print()
     
     # Create output directory
-    OUTPUT_DIR = Path(args.output_dir)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # Initialize extractor (single instance for batch processing)
     print("Initializing EntityExtractor...")
@@ -126,7 +126,7 @@ def main():
             continue
         
         # Save mentions
-        mentions_path = OUTPUT_DIR / f"{session_id}_mentions.json"
+        mentions_path = output_dir / f"{session_id}_mentions.json"
         try:
             with open(mentions_path, "w", encoding="utf-8") as f:
                 json.dump(
@@ -145,7 +145,7 @@ def main():
         print(f"  [OK] Mentions: {len(mentions)} total, {resolved} resolved")
         
         # Save unresolved mentions log
-        unresolved_path = OUTPUT_DIR / f"unresolved_{session_id}.json"
+        unresolved_path = output_dir / f"unresolved_{session_id}.json"
         extractor.save_unresolved_log(str(unresolved_path))
         unresolved_count = extractor.get_unresolved_count()
         print(f"  Unresolved: {unresolved_count} mentions -> {unresolved_path.name}")
@@ -170,7 +170,7 @@ def main():
         print(f"Resolution rate: {(total_resolved/total_mentions)*100:.1f}%")
     else:
         print("Resolution rate: 0.0%")
-    print(f"\nOutput directory: {OUTPUT_DIR}")
+    print(f"\nOutput directory: {output_dir}")
     print(f"  - Mention files: {len(transcript_files)} x *_mentions.json")
     print(f"  - Unresolved logs: {len(transcript_files)} x unresolved_*.json")
     
