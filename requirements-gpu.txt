@@ -1,0 +1,63 @@
+# GPU Pipeline Dependencies
+#
+# Pin these exact versions to avoid dependency hell on Azure GPU VMs.
+# See: https://github.com/caribdigital/graphhansard (GPU pipeline dependency pinning)
+#
+# WHY THESE PINS ARE REQUIRED:
+#
+# 1. pyannote.audio 4.x BREAKS: Requires torchcodec which has broken ABI on Azure VMs.
+#    Must use pyannote 3.4.0.
+#
+# 2. PyTorch 2.6+ BREAKS pyannote 3.x: The weights_only=True default in torch.load()
+#    rejects pyannote model checkpoints. Requires monkey-patch or older PyTorch.
+#
+# 3. whisperx API CHANGES: DiarizationPipeline moved from top-level to whisperx.diarize
+#    submodule in newer versions. Installing from git ensures compatibility.
+#
+# CRITICAL: If using PyTorch 2.6+, you MUST monkey-patch torch.load():
+#
+#   import torch
+#   _original_load = torch.load
+#   def _patched_load(*args, **kwargs):
+#       kwargs.setdefault('weights_only', False)
+#       return _original_load(*args, **kwargs)
+#   torch.load = _patched_load
+#
+# This must be done BEFORE importing pyannote.audio.
+#
+# NOTE: PyTorch 2.1-2.5 works without the monkey-patch. PyTorch 2.6.x requires it.
+# We cap at <2.7 to prevent untested versions, but 2.6.x is supported WITH the patch.
+
+# Core ML frameworks (pinned to avoid pyannote breakage)
+torch>=2.1,<2.7
+torchaudio>=2.1,<2.7
+
+# Speaker diarization (MUST be 3.x, not 4.x)
+pyannote.audio==3.4.0
+
+# Transcription and alignment
+faster-whisper>=1.0
+whisperx @ git+https://github.com/m-bain/whisperx.git
+
+# NLP transformers (required by pyannote and whisperx)
+transformers>=4.36
+
+# Additional dependencies for complete brain functionality
+numpy>=1.20.0
+librosa>=0.10.0
+spacy>=3.0
+
+# INSTALLATION INSTRUCTIONS:
+#
+# 1. Install PyTorch with CUDA support first (if needed):
+#    pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# 2. Install pinned GPU dependencies:
+#    pip install -r requirements-gpu.txt
+#
+# 3. DO NOT run "pip install -e '.[brain]'" after this, as it will upgrade pyannote!
+#    If you need other optional dependencies, install them individually.
+#
+# 4. Verify versions:
+#    python -c "import pyannote.audio; print(pyannote.audio.__version__)"
+#    python -c "import torch; print(torch.__version__)"
