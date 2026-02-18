@@ -349,6 +349,86 @@ class TestFullTranscriptExtraction:
         assert len(mentions_before) > 0
         assert len(mentions_after) > 0
 
+    def test_extract_mentions_skips_excluded_segments(self, extractor):
+        """Segments with exclude_from_extraction=True produce no mentions (BC-9, BC-10)."""
+        transcript = {
+            "session_id": "2023-11-15-debate",
+            "segments": [
+                {
+                    "text": "The Prime Minister opened the debate.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                    "exclude_from_extraction": True,  # This segment should be skipped
+                },
+                {
+                    "text": "The Member for Cat Island responded to the statement.",
+                    "speaker_node_id": "mp_cooper_chester",
+                    "start_time": 5.0,
+                    "end_time": 10.0,
+                    "exclude_from_extraction": False,  # This segment should process
+                },
+            ],
+        }
+        
+        mentions = extractor.extract_mentions(transcript, debate_date="2023-11-15")
+        
+        # Should only find mentions from the second segment
+        # First segment is excluded, so "Prime Minister" should not appear
+        assert len(mentions) >= 1  # At least one from second segment
+        
+        # Verify no mentions from first segment (Prime Minister)
+        pm_mentions = [m for m in mentions if "Prime Minister" in m.raw_mention]
+        assert len(pm_mentions) == 0
+        
+        # Verify mentions from second segment exist (Member for Cat Island)
+        member_mentions = [m for m in mentions if "Member for Cat Island" in m.raw_mention]
+        assert len(member_mentions) > 0
+
+    def test_extract_mentions_processes_when_flag_false(self, extractor):
+        """Segments with exclude_from_extraction=False process normally."""
+        transcript = {
+            "session_id": "2023-11-15-debate",
+            "segments": [
+                {
+                    "text": "The Prime Minister opened the debate.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                    "exclude_from_extraction": False,
+                },
+            ],
+        }
+        
+        mentions = extractor.extract_mentions(transcript, debate_date="2023-11-15")
+        
+        # Should find mentions normally
+        assert len(mentions) > 0
+        pm_mentions = [m for m in mentions if "Prime Minister" in m.raw_mention]
+        assert len(pm_mentions) > 0
+
+    def test_extract_mentions_processes_when_flag_missing(self, extractor):
+        """Segments without exclude_from_extraction flag process normally."""
+        transcript = {
+            "session_id": "2023-11-15-debate",
+            "segments": [
+                {
+                    "text": "The Prime Minister opened the debate.",
+                    "speaker_node_id": "mp_thompson_iram",
+                    "start_time": 0.0,
+                    "end_time": 5.0,
+                    # No exclude_from_extraction flag
+                },
+            ],
+        }
+        
+        mentions = extractor.extract_mentions(transcript, debate_date="2023-11-15")
+        
+        # Should find mentions normally when flag is absent
+        assert len(mentions) > 0
+        pm_mentions = [m for m in mentions if "Prime Minister" in m.raw_mention]
+        assert len(pm_mentions) > 0
+
 
 class TestResolutionMethods:
     """Test resolution method tracking."""
