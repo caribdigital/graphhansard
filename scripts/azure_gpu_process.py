@@ -148,7 +148,7 @@ def main():
         # Save unresolved mentions log
         unresolved_path = OUTPUT_DIR / f"unresolved_{session_id}.json"
         extractor.save_unresolved_log(str(unresolved_path))
-        print(f"  [{session_id}] Unresolved: {unresolved} mentions -> {unresolved_path.name}")
+        print(f"  Unresolved: {unresolved} mentions -> {unresolved_path.name}")
         
         # Clear unresolved log for next session
         extractor.clear_unresolved_log()
