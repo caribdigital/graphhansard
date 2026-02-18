@@ -24,6 +24,12 @@ Usage Example:
     >>> context_with_markers = "On a point of order! The Member is out of line."
     >>> result = scorer.score(context_with_markers)
     >>> print(result.parliamentary_markers)  # ['point_of_order', 'heckling']
+    >>> 
+    >>> # Procedural Chair/Speaker recognition (Issue #55)
+    >>> procedural = "The Chair recognizes the Honourable Member for Freetown."
+    >>> result = scorer.score(procedural)
+    >>> print(result.label)  # SentimentLabel.NEUTRAL (pattern-based, skips model)
+    >>> print(result.confidence)  # 1.0
 
 Integration with Entity Extraction:
     >>> from graphhansard.brain.entity_extractor import EntityExtractor
@@ -41,6 +47,8 @@ Integration with Entity Extraction:
 
 Notes:
     - Model is lazily loaded on first use to save memory
+    - Procedural Chair/Speaker recognition patterns are detected first and assigned
+      neutral sentiment without calling the model (Issue #55)
     - Zero-shot classification uses facebook/bart-large-mnli by default
     - Parliamentary markers are detected using pattern matching (case-insensitive)
     - Confidence scores range from 0.0 to 1.0
@@ -103,6 +111,31 @@ class SentimentScorer:
         ],
     }
 
+    # Procedural patterns (Issue #55 - GR-7)
+    # These are neutral procedural statements that should not be scored as positive.
+    # Both American ("recognize") and British ("recognise") spellings are included
+    # because Whisper transcription may produce either form.
+    PROCEDURAL_PATTERNS = [
+        "the chair recognizes",
+        "the chair recognises",
+        "the speaker recognizes",
+        "the speaker recognises",
+        "the deputy speaker recognizes",
+        "the deputy speaker recognises",
+        "i recognize the member",
+        "i recognise the member",
+        "i recognize the honourable member",
+        "i recognise the honourable member",
+        "could you recognize the",
+        "could you recognise the",
+        "madam speaker recognizes",
+        "madam speaker recognises",
+        "mr speaker recognizes",
+        "mr speaker recognises",
+        "mr. speaker recognizes",
+        "mr. speaker recognises",
+    ]
+
     def __init__(self, model_name: str = "facebook/bart-large-mnli"):
         """Initialize the sentiment scorer.
 
@@ -144,6 +177,16 @@ class SentimentScorer:
         Returns:
             SentimentResult with label, confidence, and parliamentary markers.
         """
+        # Check for procedural patterns first (Issue #55)
+        # Chair/Speaker recognition should be neutral, not positive
+        if self._is_procedural(context_window):
+            markers = self._detect_markers(context_window)
+            return SentimentResult(
+                label=SentimentLabel.NEUTRAL,
+                confidence=1.0,  # High confidence for pattern-based classification
+                parliamentary_markers=markers,
+            )
+
         self._load_model()
 
         # Run zero-shot classification
@@ -183,6 +226,26 @@ class SentimentScorer:
             List of SentimentResult objects in the same order.
         """
         return [self.score(context) for context in contexts]
+
+    def _is_procedural(self, text: str) -> bool:
+        """Check if text contains procedural Chair/Speaker recognition patterns.
+
+        These are neutral procedural statements that should not be scored as positive
+        sentiment. See Issue #55 for context.
+
+        Args:
+            text: The context window text.
+
+        Returns:
+            True if text matches procedural patterns, False otherwise.
+        """
+        text_lower = text.lower()
+
+        for pattern in self.PROCEDURAL_PATTERNS:
+            if pattern in text_lower:
+                return True
+
+        return False
 
     def _detect_markers(self, text: str) -> list[str]:
         """Detect parliamentary-specific markers in text.
