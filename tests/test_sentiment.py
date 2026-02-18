@@ -317,8 +317,8 @@ class TestModelLazyLoading:
 
 
 class TestProceduralPatternDetection:
-    """Test procedural pattern detection (Issue #54 - GR-7).
-    
+    """Test procedural pattern detection (Issue #55 - GR-7).
+
     Chair/Speaker recognition phrases should be classified as neutral,
     not positive, to avoid false positives in sentiment analysis.
     """
@@ -420,7 +420,48 @@ class TestProceduralPatternDetection:
         # This has procedural pattern, so entire context treated as procedural
         context = "The Chair recognizes the Member. His work has been excellent."
         result = scorer_with_mock.score(context)
-        
+
         # Procedural pattern takes precedence
         assert result.label == SentimentLabel.NEUTRAL
         assert result.confidence == 1.0
+
+    def test_british_spelling_recognises(self, scorer):
+        """Detects British spelling 'recognises' as procedural."""
+        contexts = [
+            "The Chair recognises the Honourable Member for Cat Island.",
+            "The Speaker recognises the Member for Elizabeth.",
+            "The Deputy Speaker recognises the Honourable Member.",
+            "Madam Speaker recognises the Member for Freetown.",
+        ]
+
+        for context in contexts:
+            result = scorer.score(context)
+            assert result.label == SentimentLabel.NEUTRAL, (
+                f"British spelling not detected as procedural: {context}"
+            )
+            assert result.confidence == 1.0
+
+    def test_is_procedural_directly(self, scorer):
+        """Test _is_procedural() method directly for edge cases."""
+        assert scorer._is_procedural("The Chair recognizes the member.") is True
+        assert scorer._is_procedural("The Chair recognises the member.") is True
+        assert scorer._is_procedural("") is False
+        assert scorer._is_procedural("No procedural content here.") is False
+        assert scorer._is_procedural("I RECOGNIZE THE MEMBER for Fox Hill.") is True
+
+    def test_batch_with_procedural_mix(self, scorer_with_mock):
+        """score_batch() correctly handles mix of procedural and non-procedural."""
+        contexts = [
+            "The Chair recognizes the Honourable Member for Freetown.",
+            "I commend the Prime Minister for his excellent leadership.",
+            "The Speaker recognises the Member for Marco City.",
+        ]
+
+        results = scorer_with_mock.score_batch(contexts)
+
+        assert len(results) == 3
+        assert results[0].label == SentimentLabel.NEUTRAL  # procedural
+        assert results[0].confidence == 1.0
+        assert results[1].label == SentimentLabel.POSITIVE  # model-scored
+        assert results[2].label == SentimentLabel.NEUTRAL  # procedural (British)
+        assert results[2].confidence == 1.0
