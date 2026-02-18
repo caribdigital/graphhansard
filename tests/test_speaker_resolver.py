@@ -402,6 +402,147 @@ class TestRecognitionChaining:
         assert resolution.resolved_node_id == "mp_pintard_michael"
         assert resolution.method == "recognition_chaining"
 
+    def test_recognition_with_brief_interjection_at_i_plus_1(self, resolver):
+        """Recognition chaining skips brief interjection and finds MP at i+2."""
+        transcript = {
+            "session_id": "test_interjection",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Member for Freetown.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_03",
+                    "text": "Order!",  # Brief interjection <10 words
+                    "start_time": 3.5,
+                    "end_time": 4.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to discuss infrastructure development in my constituency.",
+                    "start_time": 4.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be resolved as Freetown MP
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_munroe_wayne"
+        assert resolutions["SPEAKER_01"].method == "recognition_chaining"
+        # Confidence should be lower (0.65) since it's at i+2
+        assert resolutions["SPEAKER_01"].confidence == 0.65
+
+    def test_recognition_with_interjection_at_i_plus_2(self, resolver):
+        """Recognition chaining finds MP at i+3 when i+1 and i+2 are brief."""
+        transcript = {
+            "session_id": "test_interjection_i3",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Member for Freetown.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_03",
+                    "text": "Order!",  # Brief interjection
+                    "start_time": 3.5,
+                    "end_time": 4.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_04",
+                    "text": "Hear, hear!",  # Another brief interjection
+                    "start_time": 4.2,
+                    "end_time": 4.5,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to discuss infrastructure development in my constituency.",
+                    "start_time": 5.0,
+                    "end_time": 12.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be resolved as Freetown MP
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_munroe_wayne"
+        # Confidence should be lowest (0.55) since it's at i+3
+        assert resolutions["SPEAKER_01"].confidence == 0.55
+
+    def test_recognition_skips_chair_speaker_segments(self, resolver):
+        """Recognition chaining skips segments from the Chair."""
+        transcript = {
+            "session_id": "test_skip_chair",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Member for Freetown.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "Order, order. The member has the floor and should be heard.",  # Chair speaking again
+                    "start_time": 3.5,
+                    "end_time": 7.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to discuss infrastructure development in my constituency.",
+                    "start_time": 7.5,
+                    "end_time": 14.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be resolved as Freetown MP at i+2
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_munroe_wayne"
+        # Confidence should be 0.65 since Chair segment was skipped
+        assert resolutions["SPEAKER_01"].confidence == 0.65
+
+    def test_recognition_prefers_first_substantial_different_speaker(self, resolver):
+        """Recognition chaining prefers first >10 word segment from different speaker."""
+        transcript = {
+            "session_id": "test_prefer_substantial",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Member for Freetown.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_03",
+                    "text": "Point of order!",  # Brief from different speaker
+                    "start_time": 3.5,
+                    "end_time": 4.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to discuss infrastructure development in my constituency.",
+                    "start_time": 4.5,
+                    "end_time": 11.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+
+        # SPEAKER_01 should be resolved (substantial speech)
+        assert "SPEAKER_01" in resolutions
+        assert resolutions["SPEAKER_01"].resolved_node_id == "mp_munroe_wayne"
+        # SPEAKER_03 should NOT be resolved (brief interjection)
+        if "SPEAKER_03" in resolutions and resolutions["SPEAKER_03"].method == "recognition_chaining":
+            # If it's resolved by recognition, it shouldn't be as Freetown MP
+            assert resolutions["SPEAKER_03"].resolved_node_id != "mp_munroe_wayne"
+
 
 class TestPortfolioFingerprinting:
     """Test portfolio/topic fingerprinting heuristic."""
