@@ -115,10 +115,15 @@ class EntityExtractor:
 
     # Foreign leader pattern - detects nationality qualifiers before titles
     # This prevents foreign leaders from being resolved to Bahamian MPs
+    # NOTE: The generic suffix pattern [A-Z][a-z]+(?:ian|ese|ish|an) may match
+    # some non-nationality words (e.g., 'Christian', 'Asian'), but the full pattern
+    # requires these to be followed by governmental titles, minimizing false positives.
+    # Trade-off: Broad nationality matching vs. avoiding undetected foreign leaders.
     FOREIGN_LEADER_PATTERN = re.compile(
         r"(?:the\s+)?(?:Canadian|British|American|French|Cuban|Haitian|Jamaican|"
         r"Trinidadian|Barbadian|Dominican|Mexican|European|Russian|Chinese|"
-        r"Indian|German|Italian|Spanish|Australian|New\s+Zealand|"
+        r"Indian|German|Italian|Spanish|Australian|New\s+Zealand|Norwegian|Swedish|"
+        r"Danish|Finnish|Dutch|Belgian|Swiss|Austrian|Polish|Greek|Turkish|"
         r"[A-Z][a-z]+(?:ian|ese|ish|an))\s+"
         r"(?:Prime\s+Minister|President|Chancellor|Premier|King|Queen|"
         r"Minister|Leader|Foreign\s+Minister|Defence\s+Minister)",

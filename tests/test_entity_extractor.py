@@ -118,10 +118,8 @@ class TestForeignLeaderDetection:
         text = "The address by the Canadian prime minister was discussed."
         mentions = extractor._extract_pattern_mentions(text)
 
-        # Should NOT find "Canadian prime minister" or "prime minister" in this context
+        # Should not detect 'prime minister' when qualified as Canadian
         mention_texts = [m[0].lower() for m in mentions]
-        # Ensure we don't have any mention containing "prime minister"
-        # (because it's qualified as Canadian)
         assert not any("prime minister" in m for m in mention_texts)
 
     def test_british_prime_minister_not_detected(self, extractor):
