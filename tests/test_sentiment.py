@@ -4,7 +4,6 @@ Tests sentiment classification, parliamentary marker detection, and confidence s
 See Issue #12 (BR-16 through BR-20).
 """
 
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -29,29 +28,56 @@ def mock_pipeline():
         # Handle both single text and batch processing
         def _classify_text(txt):
             txt_lower = txt.lower()
-            
-            if any(word in txt_lower for word in ["commend", "excellent", "support", "outstanding", "praise"]):
+
+            positive_words = [
+                "commend",
+                "excellent",
+                "support",
+                "outstanding",
+                "praise",
+            ]
+            negative_words = [
+                "failed",
+                "reckless",
+                "misguided",
+                "disaster",
+                "critical",
+            ]
+
+            if any(word in txt_lower for word in positive_words):
                 return {
-                    "labels": ["supportive reference", "neutral or procedural reference", "hostile or critical reference"],
-                    "scores": [0.85, 0.10, 0.05]
+                    "labels": [
+                        "supportive reference",
+                        "neutral or procedural reference",
+                        "hostile or critical reference",
+                    ],
+                    "scores": [0.85, 0.10, 0.05],
                 }
-            elif any(word in txt_lower for word in ["failed", "reckless", "misguided", "disaster", "critical"]):
+            elif any(word in txt_lower for word in negative_words):
                 return {
-                    "labels": ["hostile or critical reference", "neutral or procedural reference", "supportive reference"],
-                    "scores": [0.80, 0.15, 0.05]
+                    "labels": [
+                        "hostile or critical reference",
+                        "neutral or procedural reference",
+                        "supportive reference",
+                    ],
+                    "scores": [0.80, 0.15, 0.05],
                 }
             else:
                 return {
-                    "labels": ["neutral or procedural reference", "supportive reference", "hostile or critical reference"],
-                    "scores": [0.75, 0.15, 0.10]
+                    "labels": [
+                        "neutral or procedural reference",
+                        "supportive reference",
+                        "hostile or critical reference",
+                    ],
+                    "scores": [0.75, 0.15, 0.10],
                 }
-        
+
         # Support batch processing (list input)
         if isinstance(text, list):
             return [_classify_text(t) for t in text]
         else:
             return _classify_text(text)
-    
+
     return _mock_pipeline
 
 
@@ -105,13 +131,13 @@ class TestDeviceSelection:
         """Device parameter is stored correctly."""
         scorer_cpu = SentimentScorer(device="cpu")
         assert scorer_cpu._device == "cpu"
-        
+
         scorer_gpu = SentimentScorer(device="gpu")
         assert scorer_gpu._device == "gpu"
-        
+
         scorer_none = SentimentScorer(device=None)
         assert scorer_none._device is None
-        
+
         scorer_numeric = SentimentScorer(device="1")
         assert scorer_numeric._device == "1"
 
@@ -173,7 +199,10 @@ class TestParliamentaryMarkers:
 
     def test_point_of_order_detection(self, scorer_with_mock):
         """Detects 'point of order' markers."""
-        context = "On a point of order, Mr. Speaker! The Member has misstated the facts."
+        context = (
+            "On a point of order, Mr. Speaker! "
+            "The Member has misstated the facts."
+        )
         result = scorer_with_mock.score(context)
 
         assert "point_of_order" in result.parliamentary_markers
@@ -253,7 +282,7 @@ class TestEdgeCases:
     def test_empty_context(self, scorer_with_mock):
         """Handles empty context string."""
         result = scorer_with_mock.score("")
-        
+
         # Should still return a result (likely neutral)
         assert isinstance(result, SentimentResult)
         assert result.label in [
@@ -265,7 +294,7 @@ class TestEdgeCases:
     def test_very_short_context(self, scorer_with_mock):
         """Handles very short context."""
         result = scorer_with_mock.score("Good.")
-        
+
         assert isinstance(result, SentimentResult)
         assert 0.0 <= result.confidence <= 1.0
 
@@ -278,9 +307,9 @@ class TestEdgeCases:
             "The data he presents does not support his argument.",
             "We must consider alternative approaches to this issue.",
         ])
-        
+
         result = scorer_with_mock.score(context)
-        
+
         assert isinstance(result, SentimentResult)
         assert 0.0 <= result.confidence <= 1.0
 
@@ -296,9 +325,9 @@ class TestIntegrationWithMentionRecords:
             "for his outstanding work on the education committee. "
             "His dedication to our students is truly commendable."
         )
-        
+
         result = scorer_with_mock.score(context)
-        
+
         assert result.label == SentimentLabel.POSITIVE
         assert result.confidence > 0.5  # Should be confident
 
@@ -313,7 +342,7 @@ class TestParliamentaryContext:
             "the Member for Englerston, for his passionate advocacy "
             "on behalf of his constituents."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.POSITIVE
 
@@ -323,7 +352,7 @@ class TestParliamentaryContext:
             "Mr. Speaker, the Minister has failed to answer the question. "
             "This is yet another example of this government's lack of transparency."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.NEGATIVE
 
@@ -333,7 +362,7 @@ class TestParliamentaryContext:
             "Mr. Speaker, the Attorney General tabled the bill yesterday. "
             "It will be debated in committee next Tuesday."
         )
-        
+
         result = scorer_with_mock.score(context)
         assert result.label == SentimentLabel.NEUTRAL
 

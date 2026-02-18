@@ -6,20 +6,20 @@ context window. See SRD §8.4 (BR-16 through BR-20).
 Usage Example:
     >>> from graphhansard.brain.sentiment import SentimentScorer
     >>> scorer = SentimentScorer()
-    >>> 
+    >>>
     >>> # Score a single context window
     >>> context = "I commend the Prime Minister for his excellent work on this bill."
     >>> result = scorer.score(context)
     >>> print(result.label)  # SentimentLabel.POSITIVE
     >>> print(result.confidence)  # 0.85
-    >>> 
+    >>>
     >>> # Score multiple contexts in batch
     >>> contexts = [
     ...     "The Minister has failed to answer the question.",
     ...     "The Attorney General tabled the bill yesterday.",
     ... ]
     >>> results = scorer.score_batch(contexts)
-    >>> 
+    >>>
     >>> # Check for parliamentary markers
     >>> context_with_markers = "On a point of order! The Member is out of line."
     >>> result = scorer.score(context_with_markers)
@@ -34,16 +34,18 @@ Usage Example:
 Integration with Entity Extraction:
     >>> from graphhansard.brain.entity_extractor import EntityExtractor
     >>> from graphhansard.brain.sentiment import SentimentScorer
-    >>> 
+    >>>
     >>> # Extract mentions from transcript
     >>> extractor = EntityExtractor('path/to/mps.json')
     >>> mentions = extractor.extract_mentions(transcript)
-    >>> 
+    >>>
     >>> # Score sentiment for each mention
     >>> scorer = SentimentScorer()
     >>> for mention in mentions:
     ...     sentiment = scorer.score(mention.context_window)
-    ...     print(f"{mention.raw_mention}: {sentiment.label} ({sentiment.confidence:.2f})")
+    ...     label = sentiment.label
+    ...     conf = sentiment.confidence
+    ...     print(f"{mention.raw_mention}: {label} ({conf:.2f})")
 
 Notes:
     - Model is lazily loaded on first use to save memory
@@ -162,8 +164,8 @@ class SentimentScorer:
         """Lazy load the model pipeline on first use."""
         if self.pipeline is None:
             try:
-                from transformers import pipeline
                 import torch
+                from transformers import pipeline
             except ImportError as e:
                 raise ImportError(
                     "transformers library is required for SentimentScorer. "
