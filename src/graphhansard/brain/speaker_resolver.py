@@ -70,6 +70,12 @@ class SpeakerResolver:
             r"(?:The\s+)?(?:Honou?rable|Hon\.?)\s+([A-Z][A-Za-z\s\.]+)\s+(?:has|will\s+have)\s+the\s+floor",
             re.IGNORECASE
         ),
+        # "I recognize the [Title]" - for ministerial/portfolio titles
+        # Captures titles like "Deputy Prime Minister", "Minister of Foreign Affairs", etc.
+        re.compile(
+            r"(?:The\s+Chair|I)\s+recogni[sz]es?\s+(?:the\s+)?((?:Deputy\s+)?Prime\s+Minister|Minister(?:\s+of\s+[A-Z][A-Za-z\s,&]+?)?|Attorney\s+General|Leader\s+of\s+the\s+(?:Official\s+)?Opposition)(?:\s+(?:to|who|on)|\.|,|$)",
+            re.IGNORECASE
+        ),
     ]
     
     # Self-reference indicators (reserved for future enhancement)
@@ -96,6 +102,7 @@ class SpeakerResolver:
         """Build reverse lookup indices for fast resolution."""
         self.constituency_to_mp = {}
         self.name_to_mp = {}
+        self.title_to_mp = {}
         self.speaker_node_id = None
         self.deputy_speaker_node_id = None
         
@@ -109,6 +116,19 @@ class SpeakerResolver:
             common_name = mp_data.get("common_name", "")
             if common_name:
                 self.name_to_mp[common_name.lower()] = node_id
+            
+            # Portfolio/title index - map current portfolio titles to MPs
+            portfolios = mp_data.get("portfolios", [])
+            for portfolio in portfolios:
+                # Only index current portfolios (end_date is None)
+                if portfolio.get("end_date") is None:
+                    title = portfolio.get("title", "").lower()
+                    short_title = portfolio.get("short_title", "").lower()
+                    
+                    if title:
+                        self.title_to_mp[title] = node_id
+                    if short_title and short_title != title:
+                        self.title_to_mp[short_title] = node_id
             
             # Speaker identification
             special_roles = mp_data.get("special_roles", [])
@@ -298,15 +318,19 @@ class SpeakerResolver:
         return resolutions
     
     def _resolve_recognized_entity(self, text: str) -> str | None:
-        """Resolve a recognized entity (name or constituency) to node_id.
+        """Resolve a recognized entity (name, constituency, or title) to node_id.
         
         Args:
-            text: The recognized text (e.g., "Cat Island" or "Fred Mitchell")
+            text: The recognized text (e.g., "Cat Island", "Fred Mitchell", "Deputy Prime Minister")
             
         Returns:
             MP node_id if resolved, None otherwise
         """
         text_lower = text.lower().strip()
+        
+        # Try exact title match first (for ministerial titles)
+        if text_lower in self.title_to_mp:
+            return self.title_to_mp[text_lower]
         
         # Try constituency match
         if text_lower in self.constituency_to_mp:

@@ -290,6 +290,117 @@ class TestRecognitionChaining:
                 # Should have good confidence (0.75 in implementation)
                 assert resolution.confidence >= 0.7
 
+    def test_recognize_deputy_prime_minister(self, resolver):
+        """Recognizes Deputy Prime Minister by title."""
+        transcript = {
+            "session_id": "test_title_dpm",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Deputy Prime Minister.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to discuss tourism development and our aviation sector which are critical to our economy.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        
+        # SPEAKER_01 should be Chester Cooper (Deputy Prime Minister)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_cooper_chester"
+        assert resolution.method == "recognition_chaining"
+        assert "Deputy Prime Minister" in resolution.evidence[0]
+
+    def test_recognize_minister_of_foreign_affairs(self, resolver):
+        """Recognizes Minister of Foreign Affairs by title."""
+        transcript = {
+            "session_id": "test_title_foreign",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Minister of Foreign Affairs.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I wish to address our international relations and diplomatic efforts in the region.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        
+        # SPEAKER_01 should be Fred Mitchell (Minister of Foreign Affairs)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_mitchell_fred"
+        assert resolution.method == "recognition_chaining"
+        assert "Minister of Foreign Affairs" in resolution.evidence[0]
+
+    def test_recognize_prime_minister(self, resolver):
+        """Recognizes Prime Minister by title."""
+        transcript = {
+            "session_id": "test_title_pm",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "The Chair recognizes the Prime Minister.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I want to address the budget and fiscal policy that will guide our nation forward.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        
+        # SPEAKER_01 should be Brave Davis (Prime Minister)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_davis_brave"
+        assert resolution.method == "recognition_chaining"
+        assert "Prime Minister" in resolution.evidence[0]
+
+    def test_recognize_leader_of_opposition(self, resolver):
+        """Recognizes Leader of the Opposition by title."""
+        transcript = {
+            "session_id": "test_title_opposition",
+            "segments": [
+                {
+                    "speaker_label": "SPEAKER_00",
+                    "text": "I recognize the Leader of the Opposition.",
+                    "start_time": 0.0,
+                    "end_time": 3.0,
+                },
+                {
+                    "speaker_label": "SPEAKER_01",
+                    "text": "Thank you Madam Speaker. I rise to express our concerns about the proposed legislation and its impact on our constituents.",
+                    "start_time": 3.5,
+                    "end_time": 10.0,
+                },
+            ]
+        }
+        resolutions = resolver.resolve_speakers(transcript)
+        
+        # SPEAKER_01 should be Michael Pintard (Leader of the Opposition)
+        assert "SPEAKER_01" in resolutions
+        resolution = resolutions["SPEAKER_01"]
+        assert resolution.resolved_node_id == "mp_pintard_michael"
+        assert resolution.method == "recognition_chaining"
+
 
 class TestPortfolioFingerprinting:
     """Test portfolio/topic fingerprinting heuristic."""
