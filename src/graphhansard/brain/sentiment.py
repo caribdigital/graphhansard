@@ -176,16 +176,30 @@ class SentimentScorer:
             if self._device is None:
                 # Auto-detect: GPU if available, else CPU
                 device = 0 if torch.cuda.is_available() else -1
-            elif self._device.lower() == "cpu":
-                device = -1
-            elif self._device.lower() in ("cuda", "gpu"):
-                device = 0
-            else:
-                # Allow numeric device IDs (e.g., "0", "1")
-                try:
-                    device = int(self._device)
-                except ValueError:
+            elif isinstance(self._device, str):
+                device_lower = self._device.lower()
+                if device_lower == "cpu":
                     device = -1
+                elif device_lower in ("cuda", "gpu"):
+                    device = 0
+                else:
+                    # Allow numeric device IDs (e.g., "0", "1")
+                    try:
+                        device = int(self._device)
+                    except ValueError:
+                        import warnings
+
+                        warnings.warn(
+                            f"Invalid device '{self._device}'. "
+                            f"Expected 'cpu', 'cuda', 'gpu', or numeric ID. "
+                            f"Defaulting to CPU.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                        device = -1
+            else:
+                # Handle numeric device IDs passed as integers
+                device = int(self._device)
 
             self.pipeline = pipeline(
                 "zero-shot-classification",

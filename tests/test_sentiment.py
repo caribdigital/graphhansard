@@ -123,6 +123,11 @@ class TestSentimentScorerInit:
         scorer = SentimentScorer(device="cuda")
         assert scorer._device == "cuda"
 
+    def test_scorer_numeric_device(self):
+        """Scorer accepts numeric device ID as integer."""
+        scorer = SentimentScorer(device=0)
+        assert scorer._device == 0
+
 
 class TestDeviceSelection:
     """Test device selection logic."""
