@@ -191,7 +191,7 @@ class TestMetadataLoading:
 class TestBatchProcessing:
     """Test batch processing with metadata."""
 
-    @patch("scripts.batch_transcribe.create_pipeline")
+    @patch("graphhansard.brain.pipeline.create_pipeline")
     @patch("scripts.batch_transcribe.discover_audio_files")
     def test_process_batch_with_metadata(
         self, mock_discover, mock_create_pipeline
@@ -255,7 +255,7 @@ class TestBatchProcessing:
                 assert output_data["session_metadata"]["date"] == "2026-01-28"
                 assert output_data["session_metadata"]["title"] == "House of Assembly 28 Jan 2026 Morning"
 
-    @patch("scripts.batch_transcribe.create_pipeline")
+    @patch("graphhansard.brain.pipeline.create_pipeline")
     @patch("scripts.batch_transcribe.discover_audio_files")
     def test_process_batch_without_metadata(
         self, mock_discover, mock_create_pipeline
@@ -293,7 +293,7 @@ class TestBatchProcessing:
                 assert output_data["session_metadata"]["date"] is None
                 assert output_data["session_metadata"]["title"] == "Session 7cuPpo7ko78"
 
-    @patch("scripts.batch_transcribe.create_pipeline")
+    @patch("graphhansard.brain.pipeline.create_pipeline")
     @patch("scripts.batch_transcribe.discover_audio_files")
     def test_process_batch_no_audio_files(
         self, mock_discover, mock_create_pipeline
