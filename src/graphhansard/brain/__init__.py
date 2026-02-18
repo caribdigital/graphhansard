@@ -9,6 +9,7 @@ networks through four sequential stages:
 
 Includes Bahamian Creole normalization utilities (BC-1, BC-2, BC-3).
 Includes audio quality analysis per BC-8, BC-9, BC-10 (SRD §11.3).
+Includes speaker identity resolution to map SPEAKER_XX to MP node IDs.
 """
 
 try:
@@ -29,6 +30,11 @@ from graphhansard.brain.creole_utils import (
 )
 from graphhansard.brain.diarizer import Diarizer
 from graphhansard.brain.pipeline import TranscriptionPipeline, create_pipeline
+from graphhansard.brain.speaker_resolver import (
+    SpeakerResolution,
+    SpeakerResolver,
+    load_mp_registry_from_golden_record,
+)
 from graphhansard.brain.transcriber import (
     DiarizedTranscript,
     Transcriber,
@@ -47,6 +53,9 @@ __all__ = [
     "AudioQualityAnalyzer",
     "AudioQualityFlag",
     "AudioQualityMetrics",
+    "SpeakerResolver",
+    "SpeakerResolution",
+    "load_mp_registry_from_golden_record",
     "normalize_bahamian_creole",
     "normalize_th_stopping",
     "normalize_vowel_shifts",
