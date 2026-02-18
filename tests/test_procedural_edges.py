@@ -298,7 +298,7 @@ class TestProceduralEdgeTagging:
     def test_multiple_control_nodes(self):
         """Multiple control nodes (Speaker and Deputy Speaker) are identified."""
         builder = GraphBuilder()
-        
+
         mp_registry = {
             "mp_deveaux_patricia": {
                 "common_name": "Patricia Deveaux",
@@ -308,7 +308,8 @@ class TestProceduralEdgeTagging:
             "mp_bonaby_mckell": {
                 "common_name": "McKell Bonaby",
                 "party": "PLP",
-                "node_type": "debater",  # Currently not marked as control in golden record
+                "node_type": "debater",
+                "special_roles": ["Deputy Speaker"],
             },
             "mp_davis_brave": {
                 "common_name": "Brave Davis",
@@ -316,12 +317,13 @@ class TestProceduralEdgeTagging:
                 "node_type": "debater",
             },
         }
-        
+
         control_nodes = builder._extract_control_nodes(mp_registry)
-        
+
         assert "mp_deveaux_patricia" in control_nodes
-        # Note: Deputy Speaker is currently marked as debater in golden record
-        assert "mp_bonaby_mckell" not in control_nodes
+        assert "mp_bonaby_mckell" in control_nodes
+        assert "mp_davis_brave" not in control_nodes
+        assert len(control_nodes) == 2
 
     def test_no_mp_registry_defaults_to_no_control_nodes(self):
         """Without mp_registry, no nodes are marked as control."""
@@ -392,3 +394,179 @@ class TestProceduralEdgeTagging:
             
             assert edge.is_procedural is True, f"Failed for: {context}"
             assert edge.semantic_type == EdgeSemanticType.RECOGNIZING
+
+    def test_deputy_speaker_via_special_roles(self):
+        """Deputy Speaker detected via special_roles even with node_type=debater."""
+        builder = GraphBuilder()
+
+        mp_registry = {
+            "mp_bonaby_mckell": {
+                "common_name": "McKell Bonaby",
+                "party": "PLP",
+                "node_type": "debater",
+                "special_roles": ["Deputy Speaker", "Executive Chairman, Straw Market Authority"],
+            },
+            "mp_davis_brave": {
+                "common_name": "Brave Davis",
+                "party": "PLP",
+                "node_type": "debater",
+            },
+        }
+
+        mentions = [
+            {
+                "source_node_id": "mp_bonaby_mckell",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Chair recognizes the Prime Minister.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            }
+        ]
+
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_deputy",
+            date="2024-01-15",
+            mp_registry=mp_registry,
+        )
+
+        assert len(session_graph.edges) == 1
+        edge = session_graph.edges[0]
+        assert edge.is_procedural is True
+        assert edge.semantic_type == EdgeSemanticType.RECOGNIZING
+
+    def test_mixed_contexts_not_tagged_procedural(self):
+        """Edge with mixed political and procedural contexts stays political."""
+        builder = GraphBuilder()
+
+        mp_registry = {
+            "mp_davis_brave": {
+                "common_name": "Brave Davis",
+                "party": "PLP",
+                "node_type": "debater",
+            },
+        }
+
+        mentions = [
+            {
+                "source_node_id": "SPEAKER_04",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Prime Minister was wrong about this.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            },
+            {
+                "source_node_id": "SPEAKER_04",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Chair recognizes the Prime Minister.",
+                "timestamp_start": 10.0,
+                "timestamp_end": 15.0,
+            },
+        ]
+
+        session_graph = builder.build_session_graph(
+            mentions=mentions,
+            session_id="test_mixed",
+            date="2024-01-15",
+            mp_registry=mp_registry,
+        )
+
+        assert len(session_graph.edges) == 1
+        edge = session_graph.edges[0]
+        # Mixed contexts: not all match recognition pattern, stays political
+        assert edge.is_procedural is False
+        assert edge.semantic_type == EdgeSemanticType.MENTION
+
+    def test_cumulative_graph_promotes_procedural(self):
+        """Cumulative graph uses OR-semantics: procedural wins regardless of order."""
+        builder = GraphBuilder()
+
+        mp_registry = {
+            "mp_davis_brave": {
+                "common_name": "Brave Davis",
+                "party": "PLP",
+                "node_type": "debater",
+            },
+        }
+
+        # Session 1: political mention
+        mentions1 = [
+            {
+                "source_node_id": "SPEAKER_00",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Prime Minister was wrong.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            }
+        ]
+        sg1 = builder.build_session_graph(mentions1, "s1", "2026-01-01", mp_registry)
+        assert sg1.edges[0].is_procedural is False
+
+        # Session 2: procedural mention
+        mentions2 = [
+            {
+                "source_node_id": "SPEAKER_00",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Chair recognizes the Prime Minister.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            }
+        ]
+        sg2 = builder.build_session_graph(mentions2, "s2", "2026-01-02", mp_registry)
+        assert sg2.edges[0].is_procedural is True
+
+        # Non-procedural first: should still promote to procedural
+        cumul = builder.build_cumulative_graph(
+            [sg1, sg2], "cumul", ("2026-01-01", "2026-01-02"), mp_registry,
+        )
+        assert len(cumul.edges) == 1
+        assert cumul.edges[0].is_procedural is True
+        assert cumul.edges[0].semantic_type == EdgeSemanticType.RECOGNIZING
+
+        # Procedural first: also procedural
+        cumul2 = builder.build_cumulative_graph(
+            [sg2, sg1], "cumul2", ("2026-01-01", "2026-01-02"), mp_registry,
+        )
+        assert len(cumul2.edges) == 1
+        assert cumul2.edges[0].is_procedural is True
+
+    def test_cumulative_graph_non_procedural_stays_non_procedural(self):
+        """Cumulative graph with all-political sessions stays non-procedural."""
+        builder = GraphBuilder()
+
+        mp_registry = {
+            "mp_davis_brave": {
+                "common_name": "Brave Davis",
+                "party": "PLP",
+                "node_type": "debater",
+            },
+        }
+
+        mentions1 = [
+            {
+                "source_node_id": "SPEAKER_04",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The Prime Minister was wrong.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            }
+        ]
+        sg1 = builder.build_session_graph(mentions1, "s1", "2026-01-01", mp_registry)
+
+        mentions2 = [
+            {
+                "source_node_id": "SPEAKER_04",
+                "target_node_id": "mp_davis_brave",
+                "context_window": "The PM should resign.",
+                "timestamp_start": 0.0,
+                "timestamp_end": 5.0,
+            }
+        ]
+        sg2 = builder.build_session_graph(mentions2, "s2", "2026-01-02", mp_registry)
+
+        cumul = builder.build_cumulative_graph(
+            [sg1, sg2], "cumul", ("2026-01-01", "2026-01-02"), mp_registry,
+        )
+        assert len(cumul.edges) == 1
+        assert cumul.edges[0].is_procedural is False
+        assert cumul.edges[0].semantic_type == EdgeSemanticType.MENTION

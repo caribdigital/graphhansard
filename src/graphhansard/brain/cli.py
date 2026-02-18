@@ -287,6 +287,7 @@ def build_graph_command(args):
                     "constituency": mp.get("constituency"),
                     "current_portfolio": mp.get("current_portfolio"),
                     "node_type": mp.get("node_type", "debater"),
+                    "special_roles": mp.get("special_roles", []),
                 }
 
     # Build graph
@@ -438,6 +439,7 @@ def process_command(args):
                 "constituency": mp.get("constituency"),
                 "current_portfolio": mp.get("current_portfolio"),
                 "node_type": mp.get("node_type", "debater"),
+                "special_roles": mp.get("special_roles", []),
             }
 
     builder = GraphBuilder()

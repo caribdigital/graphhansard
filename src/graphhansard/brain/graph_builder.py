@@ -11,6 +11,13 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+# GR-7: Pre-compiled pattern for Chair/Speaker recognition context detection.
+# Used as fallback when source is an unresolved SPEAKER_XX diarization label.
+_RECOGNITION_PATTERN = re.compile(
+    r"(?:The\s+)?(?:Chair|Speaker)\s+recogni[sz]es?\s+",
+    re.IGNORECASE,
+)
+
 
 class StructuralRole(str, Enum):
     FORCE_MULTIPLIER = "force_multiplier"
@@ -429,11 +436,15 @@ class GraphBuilder:
     ) -> set[str]:
         """Extract control node IDs from mp_registry (GR-7).
 
+        Identifies nodes that serve a procedural control role (Speaker,
+        Deputy Speaker) via either ``node_type == "control"`` or a
+        Speaker-related entry in ``special_roles``.
+
         Args:
             mp_registry: Optional dict mapping node_id to MP data
 
         Returns:
-            Set of node_ids with node_type='control'
+            Set of node_ids identified as control nodes
         """
         control_nodes = set()
         if mp_registry:
@@ -442,6 +453,11 @@ class GraphBuilder:
                 if isinstance(reg_data, dict):
                     node_type = reg_data.get("node_type", "debater")
                     if node_type == "control":
+                        control_nodes.add(node_id)
+                        continue
+                    # Also detect Deputy Speaker via special_roles
+                    special_roles = reg_data.get("special_roles", [])
+                    if any("speaker" in r.lower() for r in special_roles):
                         control_nodes.add(node_id)
         return control_nodes
 
@@ -472,16 +488,13 @@ class GraphBuilder:
             else:
                 return True, EdgeSemanticType.MENTION
 
-        # Context-based fallback for unresolved SPEAKER_XX nodes
-        if source.startswith("SPEAKER_"):
-            # Check if any context matches Chair recognition pattern
-            recognition_pattern = re.compile(
-                r"(?:The\s+)?(?:Chair|Speaker)\s+recogni[sz]es?\s+",
-                re.IGNORECASE
-            )
-            for context in contexts:
-                if recognition_pattern.search(context):
-                    return True, EdgeSemanticType.RECOGNIZING
+        # Context-based fallback for unresolved SPEAKER_XX nodes.
+        # Require ALL contexts to match the recognition pattern so that a
+        # single procedural mention doesn't mis-tag a predominantly
+        # political edge as procedural.
+        if source.startswith("SPEAKER_") and contexts:
+            if all(_RECOGNITION_PATTERN.search(c) for c in contexts):
+                return True, EdgeSemanticType.RECOGNIZING
 
         # Default: political interaction
         return False, EdgeSemanticType.MENTION
@@ -585,6 +598,14 @@ class GraphBuilder:
                 edge_aggregations[key]["neutral_count"] += edge.neutral_count
                 edge_aggregations[key]["negative_count"] += edge.negative_count
                 edge_aggregations[key]["mention_details"].extend(edge.mention_details)
+
+                # GR-7: Promote to procedural if ANY session marks it so.
+                # Procedural is the more specific classification — it is
+                # safer to exclude a procedural edge from political analysis
+                # than to silently include it.
+                if edge.is_procedural and not edge_aggregations[key]["is_procedural"]:
+                    edge_aggregations[key]["is_procedural"] = True
+                    edge_aggregations[key]["semantic_type"] = edge.semantic_type
 
         # Build NetworkX graph
         G = nx.DiGraph()
