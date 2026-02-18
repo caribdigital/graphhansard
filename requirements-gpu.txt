@@ -1,10 +1,10 @@
 # GPU Pipeline Dependencies
-# 
+#
 # Pin these exact versions to avoid dependency hell on Azure GPU VMs.
-# See: https://github.com/caribdigital/graphhansard/issues/[ISSUE_NUMBER]
+# See: https://github.com/caribdigital/graphhansard (GPU pipeline dependency pinning)
 #
 # WHY THESE PINS ARE REQUIRED:
-# 
+#
 # 1. pyannote.audio 4.x BREAKS: Requires torchcodec which has broken ABI on Azure VMs.
 #    Must use pyannote 3.4.0.
 #
@@ -24,6 +24,9 @@
 #   torch.load = _patched_load
 #
 # This must be done BEFORE importing pyannote.audio.
+#
+# NOTE: PyTorch 2.1-2.5 works without the monkey-patch. PyTorch 2.6.x requires it.
+# We cap at <2.7 to prevent untested versions, but 2.6.x is supported WITH the patch.
 
 # Core ML frameworks (pinned to avoid pyannote breakage)
 torch>=2.1,<2.7

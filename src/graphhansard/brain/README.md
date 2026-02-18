@@ -55,7 +55,7 @@ pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -e ".[brain]"
 ```
 
-> **Note**: The `requirements-gpu.txt` file pins `pyannote.audio==3.4.0` and `torch<2.7` to avoid known issues with pyannote 4.x (torchcodec ABI breakage) and PyTorch 2.6+ (`weights_only=True` default). See the file for detailed rationale and monkey-patch requirements.
+> **Note**: The `requirements-gpu.txt` file pins `pyannote.audio==3.4.0` and `torch<2.7` to avoid known issues with pyannote 4.x (torchcodec ABI breakage) and PyTorch 2.6+ (`weights_only=True` default). If you use PyTorch 2.6.x, you must apply the monkey-patch documented in requirements-gpu.txt before importing pyannote. PyTorch 2.1-2.5 works without the patch.
 
 ### HuggingFace Token Setup
 
