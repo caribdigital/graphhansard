@@ -69,7 +69,7 @@ def preflight_checks(golden_record_path: Path) -> bool:
                 print(f"  [FAIL] Expected {EXPECTED_MP_COUNT} MPs, found {mp_count}")
                 all_passed = False
             else:
-                print(f"  [OK] Golden record loaded successfully")
+                print("  [OK] Golden record loaded successfully")
                 print(f"    MPs: {mp_count}")
                 print(
                     f"    Version: {data.get('metadata', {}).get('version', 'unknown')}"
