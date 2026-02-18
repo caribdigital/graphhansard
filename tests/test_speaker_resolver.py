@@ -811,9 +811,7 @@ class TestConflictLogging:
         ]
         
         # If there's only one heuristic resolving SPEAKER_01, no conflict should be logged
-        # This is a weaker assertion since it depends on the golden record
-        # but validates the negative case
-        assert len(speaker_01_conflicts) == 0 or any("multiple heuristics" in rec.message for rec in speaker_01_conflicts)
+        assert len(speaker_01_conflicts) == 0
 
     def test_conflict_includes_confidence_scores(self, resolver, caplog):
         """Conflict logs include confidence scores for both candidates."""
