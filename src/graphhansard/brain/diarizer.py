@@ -26,7 +26,8 @@ class Diarizer:
         """Initialize the Diarizer.
 
         Args:
-            hf_token: HuggingFace token for pyannote model access. If None, will try HF_TOKEN env var.
+            hf_token: HuggingFace token for pyannote model access.
+                If None, will try HF_TOKEN env var.
             device: Device to run on ("cuda" or "cpu")
             min_speakers: Minimum number of speakers (None for automatic)
             max_speakers: Maximum number of speakers (None for automatic)
@@ -183,8 +184,9 @@ class Diarizer:
         )
 
         # Perform diarization with WhisperX
-        # Note: In newer whisperx versions, DiarizationPipeline moved to whisperx.diarize
-        # The pinned git version in requirements-gpu.txt maintains compatibility
+        # Note: In newer whisperx versions, DiarizationPipeline moved to
+        # whisperx.diarize. The pinned git version in requirements-gpu.txt
+        # maintains compatibility
         diarize_model = whisperx.DiarizationPipeline(
             use_auth_token=self.hf_token, device=self.device
         )
