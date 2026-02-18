@@ -167,7 +167,7 @@ def main():
     print(f"Total resolved: {total_resolved}")
     print(f"Total unresolved: {total_unresolved}")
     if total_mentions > 0:
-        print(f"Resolution rate: {total_resolved/total_mentions*100:.1f}%")
+        print(f"Resolution rate: {(total_resolved/total_mentions)*100:.1f}%")
     else:
         print("Resolution rate: 0.0%")
     print(f"\nOutput directory: {OUTPUT_DIR}")
