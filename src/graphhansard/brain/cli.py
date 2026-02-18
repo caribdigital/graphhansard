@@ -197,6 +197,12 @@ def extract_command(args):
     # Print summary statistics
     resolved = sum(1 for m in mentions if m.target_node_id is not None)
     print(f"  Resolved: {resolved}/{len(mentions)}")
+    
+    # Save unresolved mentions log
+    session_id = transcript.get('session_id', 'session')
+    unresolved_path = output_path.parent / f"unresolved_{session_id}.json"
+    extractor.save_unresolved_log(str(unresolved_path))
+    print(f"  Unresolved: {extractor.get_unresolved_count()} mentions -> {unresolved_path.name}")
 
 
 def sentiment_command(args):
@@ -392,6 +398,11 @@ def process_command(args):
     print(f"  Total mentions: {len(mentions)}")
     resolved = sum(1 for m in mentions if m.target_node_id is not None)
     print(f"  Resolved: {resolved}/{len(mentions)}")
+    
+    # Save unresolved mentions log
+    unresolved_path = output_dir / f"unresolved_{args.session_id}.json"
+    extractor.save_unresolved_log(str(unresolved_path))
+    print(f"  Unresolved: {extractor.get_unresolved_count()} mentions -> {unresolved_path.name}")
 
     # Stage 3: Sentiment Scoring
     print("\n" + "=" * 70)
