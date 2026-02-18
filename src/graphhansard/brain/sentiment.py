@@ -229,7 +229,7 @@ class SentimentScorer:
             True if text matches procedural patterns, False otherwise.
         """
         text_lower = text.lower()
-        
+
         for pattern in self.PROCEDURAL_PATTERNS:
             if pattern in text_lower:
                 return True

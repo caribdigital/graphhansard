@@ -394,7 +394,9 @@ class TestProceduralPatternDetection:
 
     def test_non_procedural_with_recognize_word(self, scorer_with_mock):
         """'recognize' in non-procedural context is still scored normally."""
-        # Using 'acknowledge' instead of 'recognize' to avoid pattern match
+        # Using 'acknowledge' to test sentiment scoring without pattern match.
+        # Note: "I recognize the Member's work" would match pattern,
+        # which is acceptable since it's ambiguous (procedural vs. praise).
         context = "I acknowledge the Member's excellent work on this committee."
         result = scorer_with_mock.score(context)
         
