@@ -13,6 +13,7 @@ from pathlib import Path
 
 from graphhansard.brain.audio_quality import AudioQualityAnalyzer
 from graphhansard.brain.diarizer import Diarizer
+from graphhansard.brain.speaker_resolver import SpeakerResolver
 from graphhansard.brain.transcriber import (
     DiarizedTranscript,
     Transcriber,
@@ -31,6 +32,7 @@ class TranscriptionPipeline:
     2. Perform speaker diarization using pyannote
     3. Align and merge results to produce speaker-attributed segments
     4. Analyze audio quality and flag low-quality/hot-mic segments (BC-8, BC-9, BC-10)
+    5. Resolve speaker identities from SPEAKER_XX to MP node IDs (optional)
     """
 
     def __init__(
@@ -40,6 +42,8 @@ class TranscriptionPipeline:
         use_whisperx: bool = True,
         quality_analyzer: AudioQualityAnalyzer | None = None,
         enable_quality_analysis: bool = True,
+        speaker_resolver: SpeakerResolver | None = None,
+        enable_speaker_resolution: bool = False,
     ):
         """Initialize the pipeline.
 
@@ -53,12 +57,19 @@ class TranscriptionPipeline:
                 creates default.
             enable_quality_analysis: Whether to perform audio quality
                 analysis (BC-8, BC-9, BC-10).
+            speaker_resolver: SpeakerResolver instance for mapping
+                SPEAKER_XX to MP node IDs. If None and enable_speaker_resolution
+                is True, will create default (requires golden_record_path).
+            enable_speaker_resolution: Whether to resolve speaker identities
+                using heuristics.
         """
         self.transcriber = transcriber or Transcriber()
         self.diarizer = diarizer
         self.use_whisperx = use_whisperx
         self.quality_analyzer = quality_analyzer or AudioQualityAnalyzer()
         self.enable_quality_analysis = enable_quality_analysis
+        self.speaker_resolver = speaker_resolver
+        self.enable_speaker_resolution = enable_speaker_resolution
 
     def process(
         self,
@@ -70,6 +81,7 @@ class TranscriptionPipeline:
         """Process an audio file through the complete pipeline.
 
         Includes audio quality analysis per BC-8, BC-9, BC-10.
+        Optionally includes speaker resolution to map SPEAKER_XX to MP node IDs.
 
         Args:
             audio_path: Path to audio file
@@ -112,7 +124,46 @@ class TranscriptionPipeline:
         if self.enable_quality_analysis:
             self._apply_quality_analysis(transcript, audio_path)
 
+        # Step 4: Resolve speaker identities (SPEAKER_XX -> MP node IDs)
+        if self.enable_speaker_resolution and self.speaker_resolver:
+            self._apply_speaker_resolution(transcript)
+
         return transcript
+
+    def _apply_speaker_resolution(self, transcript: DiarizedTranscript) -> None:
+        """Apply speaker resolution to map SPEAKER_XX labels to MP node IDs.
+
+        Updates segments in-place with speaker_node_id field.
+
+        Args:
+            transcript: DiarizedTranscript to resolve speakers for
+        """
+        logger.info(
+            f"Performing speaker resolution on "
+            f"{len(transcript.segments)} segments"
+        )
+
+        # Convert to dict for resolver
+        transcript_dict = transcript.model_dump()
+
+        # Resolve speakers
+        resolutions = self.speaker_resolver.resolve_speakers(transcript_dict)
+
+        # Apply resolutions to segments
+        for segment in transcript.segments:
+            speaker_label = segment.speaker_label
+            if speaker_label in resolutions:
+                resolution = resolutions[speaker_label]
+                segment.speaker_node_id = resolution.resolved_node_id
+
+        # Log summary
+        resolved_count = sum(
+            1 for s in transcript.segments if s.speaker_node_id is not None
+        )
+        logger.info(
+            f"Speaker resolution complete: {resolved_count}/{len(transcript.segments)} "
+            f"segments resolved, {len(resolutions)} unique speakers identified"
+        )
 
     def _apply_quality_analysis(
         self, transcript: DiarizedTranscript, audio_path: str
@@ -305,6 +356,8 @@ def create_pipeline(
     backend: str = "faster-whisper",
     enable_quality_analysis: bool = True,
     snr_threshold_db: float = 10.0,
+    enable_speaker_resolution: bool = False,
+    golden_record_path: str | None = None,
 ) -> TranscriptionPipeline:
     """Factory function to create a configured pipeline.
 
@@ -319,6 +372,9 @@ def create_pipeline(
             (BC-8, BC-9, BC-10)
         snr_threshold_db: SNR threshold in dB for quality flagging
             (default: 10.0 per BC-9)
+        enable_speaker_resolution: Whether to enable speaker identity resolution
+        golden_record_path: Path to mps.json for speaker resolution
+            (required if enable_speaker_resolution=True)
 
     Returns:
         Configured TranscriptionPipeline instance
@@ -335,10 +391,27 @@ def create_pipeline(
     if enable_quality_analysis:
         quality_analyzer = AudioQualityAnalyzer(snr_threshold_db=snr_threshold_db)
 
+    speaker_resolver = None
+    if enable_speaker_resolution:
+        if not golden_record_path:
+            logger.warning(
+                "Speaker resolution enabled but no golden_record_path provided. "
+                "Speaker resolution will be disabled."
+            )
+        else:
+            from graphhansard.brain.speaker_resolver import (
+                load_mp_registry_from_golden_record,
+            )
+
+            mp_registry = load_mp_registry_from_golden_record(golden_record_path)
+            speaker_resolver = SpeakerResolver(mp_registry=mp_registry)
+
     return TranscriptionPipeline(
         transcriber=transcriber,
         diarizer=diarizer,
         use_whisperx=use_whisperx,
         quality_analyzer=quality_analyzer,
         enable_quality_analysis=enable_quality_analysis,
+        speaker_resolver=speaker_resolver,
+        enable_speaker_resolution=enable_speaker_resolution,
     )
