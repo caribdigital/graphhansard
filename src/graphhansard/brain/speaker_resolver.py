@@ -407,28 +407,162 @@ class SpeakerResolver:
     ) -> dict[str, SpeakerResolution]:
         """Resolve speakers by matching discussion topics to MP portfolios.
         
-        This is a basic implementation that looks for portfolio keywords.
+        Expanded implementation covering 15+ portfolio categories with
+        bigram/trigram keywords for precise matching.
         
         Returns:
             Dictionary mapping speaker_label -> SpeakerResolution
         """
-        # Build portfolio keyword index
+        # Build portfolio keyword index with expanded coverage
         portfolio_keywords = defaultdict(list)
         for node_id, mp_data in self.mp_registry.items():
             portfolios = mp_data.get("portfolios", [])
             for portfolio in portfolios:
                 title = portfolio.get("title", "").lower()
-                # Extract key topics from portfolio title
+                
+                # Finance (existing)
                 if "finance" in title:
-                    portfolio_keywords[node_id].extend(["budget", "finance", "tax", "revenue"])
+                    portfolio_keywords[node_id].extend([
+                        "budget", "finance", "financial", "tax", "taxation", "revenue",
+                        "fiscal", "treasury", "economy", "economic"
+                    ])
+                
+                # Tourism (existing)
                 if "tourism" in title:
-                    portfolio_keywords[node_id].extend(["tourism", "tourist", "visitors"])
-                if "foreign affairs" in title:
-                    portfolio_keywords[node_id].extend(["foreign", "international", "diplomatic"])
+                    portfolio_keywords[node_id].extend([
+                        "tourism", "tourist", "tourists", "visitors", "hotels",
+                        "resorts", "attractions", "travel"
+                    ])
+                
+                # Foreign Affairs (existing)
+                if "foreign affairs" in title or "foreign" in title:
+                    portfolio_keywords[node_id].extend([
+                        "foreign", "international", "diplomatic", "diplomacy",
+                        "embassy", "ambassador", "treaty", "bilateral"
+                    ])
+                
+                # Health (existing)
                 if "health" in title:
-                    portfolio_keywords[node_id].extend(["health", "hospital", "medical"])
+                    portfolio_keywords[node_id].extend([
+                        "health", "healthcare", "hospital", "hospitals", "medical",
+                        "doctor", "doctors", "nurses", "clinic", "clinics",
+                        "wellness", "medicine", "patient", "patients"
+                    ])
+                
+                # Education (existing)
                 if "education" in title:
-                    portfolio_keywords[node_id].extend(["education", "school", "students"])
+                    portfolio_keywords[node_id].extend([
+                        "education", "school", "schools", "students", "teachers",
+                        "university", "college", "curriculum", "training",
+                        "vocational", "technical"
+                    ])
+
+                # Transport & Aviation (new)
+                if "transport" in title or "aviation" in title:
+                    portfolio_keywords[node_id].extend([
+                        "transport", "transportation", "aviation", "airport",
+                        "airports", "airline", "airlines", "flight", "flights",
+                        "roads", "highways", "infrastructure", "traffic"
+                    ])
+
+                # Agriculture & Marine Resources (new)
+                if "agriculture" in title or "marine" in title:
+                    portfolio_keywords[node_id].extend([
+                        "agriculture", "agricultural", "farming", "farmers",
+                        "crops", "livestock", "marine", "fisheries", "fishing",
+                        "aquaculture", "seafood", "maritime"
+                    ])
+
+                # Works & Utilities (new)
+                if "works" in title or "utilities" in title:
+                    portfolio_keywords[node_id].extend([
+                        "public works", "utilities", "infrastructure", "water",
+                        "sewerage", "electricity", "power", "construction",
+                        "maintenance"
+                    ])
+
+                # Housing (new)
+                if "housing" in title:
+                    portfolio_keywords[node_id].extend([
+                        "housing", "homes", "affordable housing", "residential",
+                        "apartments", "mortgage", "mortgages", "property",
+                        "urban renewal", "subdivision", "subdivisions"
+                    ])
+
+                # Immigration (new)
+                if "immigration" in title:
+                    portfolio_keywords[node_id].extend([
+                        "immigration", "immigrants", "visa", "visas",
+                        "work permits", "citizenship",
+                        "deportation", "border", "migration"
+                    ])
+
+                # National Security (new) - bigram for precision
+                if "national security" in title or "security" in title:
+                    portfolio_keywords[node_id].extend([
+                        "national security", "security", "police", "crime",
+                        "law enforcement", "prison", "prisons", "defense",
+                        "defence", "correctional", "officer", "officers"
+                    ])
+
+                # Youth, Sports & Culture (new)
+                if "youth" in title or "sports" in title or "culture" in title:
+                    portfolio_keywords[node_id].extend([
+                        "youth", "young people", "sports", "athletics",
+                        "athletes", "culture", "cultural", "arts",
+                        "recreation", "junkanoo", "festivals"
+                    ])
+
+                # Labour (new)
+                if "labour" in title or "labor" in title:
+                    portfolio_keywords[node_id].extend([
+                        "labour", "labor", "workers", "employment",
+                        "unemployment", "jobs", "workplace", "unions",
+                        "trade unions", "minimum wage", "public service"
+                    ])
+
+                # Social Services (new)
+                if "social services" in title or "social" in title:
+                    portfolio_keywords[node_id].extend([
+                        "social services", "social", "welfare", "assistance",
+                        "poverty", "elderly", "disabled", "vulnerable",
+                        "community", "family", "children"
+                    ])
+
+                # Environment (new)
+                if "environment" in title:
+                    portfolio_keywords[node_id].extend([
+                        "environment", "environmental", "climate", "pollution",
+                        "conservation", "recycling", "waste", "renewable",
+                        "green", "sustainability", "sustainable"
+                    ])
+
+                # Energy (new)
+                if "energy" in title:
+                    portfolio_keywords[node_id].extend([
+                        "energy", "electricity", "power", "renewable energy",
+                        "solar", "fuel", "gas", "oil", "petroleum"
+                    ])
+
+                # Grand Bahama (new)
+                if "grand bahama" in title:
+                    portfolio_keywords[node_id].extend([
+                        "grand bahama", "freeport", "lucaya", "gb"
+                    ])
+
+                # Disaster Risk Management (new)
+                if "disaster" in title:
+                    portfolio_keywords[node_id].extend([
+                        "disaster", "emergency", "hurricane", "hurricanes",
+                        "relief", "recovery", "nema", "preparedness"
+                    ])
+
+                # Investments (new)
+                if "investments" in title or "investment" in title:
+                    portfolio_keywords[node_id].extend([
+                        "investment", "investments", "investor", "investors",
+                        "fdi", "foreign investment", "business"
+                    ])
 
         # Count portfolio keyword mentions per speaker
         speaker_portfolio_scores = defaultdict(lambda: defaultdict(int))
@@ -442,7 +576,17 @@ class SpeakerResolver:
 
             for node_id, keywords in portfolio_keywords.items():
                 for keyword in keywords:
-                    count = text.count(keyword)
+                    # Use word boundary matching for single words to avoid partial matches
+                    # For multi-word keywords (bigrams/trigrams), use simple count
+                    if " " in keyword:
+                        # Multi-word keyword - use simple count
+                        count = text.count(keyword)
+                    else:
+                        # Single word - use word boundary matching
+                        # Count occurrences as whole words only
+                        pattern = r'\b' + re.escape(keyword) + r'\b'
+                        count = len(re.findall(pattern, text))
+                    
                     if count > 0:
                         speaker_portfolio_scores[speaker_label][node_id] += count
 
